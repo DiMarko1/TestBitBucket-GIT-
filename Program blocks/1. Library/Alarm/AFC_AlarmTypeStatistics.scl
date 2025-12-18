@@ -1,0 +1,129 @@
+﻿FUNCTION "AFC_AlarmTypeStatistics" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      "TYPE" : Int;
+      M_TYPE : Int;
+   END_VAR
+
+   VAR_OUTPUT 
+      nAlarm : UDInt;
+      nAckn : UDInt;
+      nSiren : UDInt;
+   END_VAR
+
+   VAR_TEMP 
+      i : Int;
+      alarm : Word;
+      ackn : Word;
+      siren : Word;
+   END_VAR
+
+   VAR CONSTANT 
+      tADIN : Int := 0;
+      tAIN : Int := 1;
+      tDIFF : Int := 2;
+      tDIN : Int := 3;
+      tMTR : Int := 4;
+      tMTRLIN : Int := 5;
+      tMTRDIR : Int := 6;
+      tVLV : Int := 7;
+      tPLANT : Int := 8;
+   END_VAR
+
+
+BEGIN
+	#nAlarm := 0;
+	#nAckn := 0;
+	#nSiren := 0;
+	
+	FOR #i := 0 TO #M_TYPE DO
+	    
+	    CASE #TYPE OF
+	        #tADIN:
+	             
+	             "AFC_AlarmGatherArray"(
+	                                    ctrl := "FAULTS".ADIN[#i].ctrl,
+	                                    status := "FAULTS".ADIN[#i].status,
+	                                    _ctrl => #alarm,
+	                                    _status => #ackn);
+	                  
+	        #tAIN:
+	            
+	             "AFC_AlarmGatherStruct"(
+	                              ctrl := "FAULTS".AIN[#i].ctrl,
+	                              status := "FAULTS".AIN[#i].status,
+	                              _ctrl => #alarm,
+	                              _status => #ackn);
+	            
+	        #tDIFF:
+	            
+	             "AFC_AlarmGatherStruct"(
+	                              ctrl := "FAULTS".DIFF[#i].ctrl,
+	                              status := "FAULTS".DIFF[#i].status,
+	                              _ctrl => #alarm,
+	                              _status => #ackn);
+	            
+	        #tDIN:
+	            
+	             "AFC_AlarmGatherArray"(
+	                              ctrl := "FAULTS".DIN[#i].ctrl,
+	                              status := "FAULTS".DIN[#i].status,
+	                              _ctrl => #alarm,
+	                              _status => #ackn);
+	            
+	        #tMTR:
+	            
+	             "AFC_AlarmGatherStruct"(
+	                              ctrl := "FAULTS".MTR[#i].ctrl,
+	                              status := "FAULTS".MTR[#i].status,
+	                              _ctrl => #alarm,
+	                              _status => #ackn);
+	            
+	        #tMTRLIN:
+	            
+	             "AFC_AlarmGatherStruct"(
+	                              ctrl := "FAULTS".MTRLIN[#i].ctrl,
+	                              status := "FAULTS".MTRLIN[#i].status,
+	                              _ctrl => #alarm,
+	                              _status => #ackn);
+	            
+	        #tMTRDIR:
+	            
+	             "AFC_AlarmGatherStruct"(
+	                              ctrl := "FAULTS".MTRDIR[#i].ctrl,
+	                              status := "FAULTS".MTRDIR[#i].status,
+	                              _ctrl => #alarm,
+	                              _status => #ackn);
+	            
+	        #tVLV:
+	            
+	             "AFC_AlarmGatherStruct"(
+	                              ctrl := "FAULTS".VLV[#i].ctrl,
+	                              status := "FAULTS".VLV[#i].status,
+	                              _ctrl => #alarm,
+	                              _status => #ackn);
+	            
+	       #tPLANT:
+	            
+	            "AFC_AlarmGatherArray"(
+	                              ctrl := "FAULTS".Plant[#i].ctrl,
+	                              status := "FAULTS".Plant[#i].status,
+	                              _ctrl => #alarm,
+	                              _status => #ackn);
+	            
+	        ELSE  // Statement section ELSE
+	            ;
+	    END_CASE;
+	    
+	    
+	    #nAlarm := #nAlarm + "countAlarms"(#alarm.%B0);
+	    #nAckn := #nAckn + "countAlarms"(#ackn.%B1);
+	    #nSiren := #nSiren + "countAlarms"(#ackn.%B0);
+	    
+	    
+	END_FOR;
+	
+	
+END_FUNCTION
+

@@ -1,0 +1,66 @@
+﻿FUNCTION "AFC_Word_To_Struct" : Void
+TITLE = AFC_Word_to_Struct
+{ S7_Optimized_Access := 'FALSE' }
+AUTHOR : CH
+FAMILY : Aktina
+NAME : Global
+VERSION : 0.1
+//AFC_Word_to_Struct
+   VAR_INPUT 
+      w : Word;
+   END_VAR
+
+   VAR_OUTPUT 
+      s : Struct
+         bit0 : Bool;
+         bit1 : Bool;
+         bit2 : Bool;
+         bit3 : Bool;
+         bit4 : Bool;
+         bit5 : Bool;
+         bit6 : Bool;
+         bit7 : Bool;
+         bit8 : Bool;
+         bit9 : Bool;
+         bit10 : Bool;
+         bit11 : Bool;
+         bit12 : Bool;
+         bit13 : Bool;
+         bit14 : Bool;
+         bit15 : Bool;
+      END_STRUCT;
+   END_VAR
+
+   VAR_TEMP 
+      tw : Word;
+      ts AT tw : Struct
+         bit0 : Bool;
+         bit1 : Bool;
+         bit2 : Bool;
+         bit3 : Bool;
+         bit4 : Bool;
+         bit5 : Bool;
+         bit6 : Bool;
+         bit7 : Bool;
+         bit8 : Bool;
+         bit9 : Bool;
+         bit10 : Bool;
+         bit11 : Bool;
+         bit12 : Bool;
+         bit13 : Bool;
+         bit14 : Bool;
+         bit15 : Bool;
+      END_STRUCT;
+   END_VAR
+
+
+BEGIN
+	#tw := #w;
+	
+	#s := #ts;
+	
+	#tw := 16#0;
+	
+	RETURN;
+END_FUNCTION
+

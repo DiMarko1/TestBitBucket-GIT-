@@ -1,0 +1,340 @@
+﻿FUNCTION_BLOCK "AFB_Valve_v3"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      actmain { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Command to open the valve's main route
+      actupper { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Command to open the valve's upper s/l route
+      actlower { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Command to open the valve's lower s/l route
+      fbmain { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Feedback that indicates that the valve's main route is activated
+      fbupper { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Feedback that indicates that the valve's upper s/l route is activated
+      fblower { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Feedback that indicates that the valve's lower s/l route is activated
+      fbdeact { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Feedback that indicates that the valve is deactivated
+      blockmain { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Interlock that blocks valve's main activation
+      blockupper { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Interlock that blocks valve's upper s/l activation
+      blocklower { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Interlock that blocks valve's lower s/l activation
+      generalackn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // General acknowledgement
+      reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Option that resets the faults
+      mute { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Mute siren
+      autoset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Extra option that sets the valve in auto mode (ex. group set)
+      manualset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Extra option that sets the valve in manual mode (ex. group set)
+      p1s { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse that is generated every 1 s
+      p100ms { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse that is generated every 100 ms
+      blink { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Blink used for the graphics
+      "type" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // 0=1Q, 1= 3Q
+   END_VAR
+
+   VAR_OUTPUT 
+      main { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate main route
+      upper { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate upper s/l route
+      lower { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activate lower s/l route
+      vfbmain { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Virtual feedback - Activated main route
+      vfbupper { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Virtual feedback - Activated upper s/l route
+      vfblower { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Virtual feedback - Activated lower s/l route
+      vfbdeact { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Virtual feedback - Deactivated
+   END_VAR
+
+   VAR_IN_OUT 
+      faults : "UDT_VALVEFAULTS";   // External data (Primary alarm data - alarm & plc ackn)
+   END_VAR
+
+   VAR RETAIN
+      i : "UDT_VALVE";
+   END_VAR
+
+   VAR_TEMP 
+      condSET : Bool;
+      condRESET : Bool;
+   END_VAR
+
+
+BEGIN
+	REGION FEEDBACK  NW:2-5
+	    
+	    //Network2: FEEDBACK: Generate virtual (processed) feedback (main route)
+	    
+	    #i.status.vfbmain := (#fbmain AND NOT #i.sim.main) OR (#i.out.actmain AND #i.sim.main);
+	    
+	    //Network3: FEEDBACK: Generate virtual (processed) feedback (upper s/l route)
+	    
+	    #i.status.vfbupper := (#fbupper AND NOT #i.sim.upper) OR (#i.out.actupper AND #i.sim.upper);
+	    
+	    //Network4: FEEDBACK: Generate virtual (processed) feedback (lower s/l route)
+	    
+	    #i.status.vfblower := (#fblower AND NOT #i.sim.lower) OR (#i.out.actlower AND #i.sim.lower);
+	    
+	    //Network5: FEEDBACK: Generate virtual (processed) feedback (deactivated)
+	    
+	    #i.status.vfbdeact := (#fbdeact AND NOT #i.sim.deact) OR (NOT #i.out.actmain AND NOT #i.out.actlower AND NOT #i.out.actupper AND NOT #i.sim.deact);
+	    
+	END_REGION
+	
+	REGION MANUAL CONTROL  NW:6-10
+	    
+	    //Network6: MANUAL CONTROL: Manual set
+	    
+	    #condSET := #i.cmd.man OR #manualset;
+	    #condRESET := #i.cmd.auto OR #autoset;
+	    
+	    #i.ind.man := (#i.ind.man OR #condSET) AND NOT #condRESET;
+	    
+	    //Network7: MANUAL CONTROL: Auto set
+	    
+	    #i.ind.auto := NOT #i.ind.man;
+	    
+	    //Network8: MANUAL CONTROL: Activate manually main route
+	    
+	    #condSET := NOT (#i.man.upper OR #i.man.lower OR #i.cmd.upper OR #i.cmd.lower) AND (#i.ind.man AND #i.cmd.main);
+	    #condRESET := #i.cmd.deact OR NOT (#i.status.ilactmain AND #i.ind.man);
+	    
+	    #i.man.main := (#i.man.main OR #condSET) AND NOT #condRESET;
+	    
+	    //Network9: MANUAL CONTROL: Activate manually upper s/l route
+	    
+	    #condSET := NOT (#i.man.main OR #i.man.lower OR #i.cmd.main OR #i.cmd.lower) AND (#i.ind.man AND #i.cmd.upper);
+	    #condRESET := #i.cmd.deact OR (#type <> 1) OR NOT (#i.status.ilactupper AND #i.ind.man);
+	    
+	    #i.man.upper := (#i.man.upper OR #condSET) AND NOT #condRESET;
+	    
+	    //Network10: MANUAL CONTROL: Activate manually lower s/l route
+	    
+	    #condSET := NOT (#i.man.upper OR #i.man.main OR #i.cmd.upper OR #i.cmd.main) AND (#i.ind.man AND #i.cmd.lower);
+	    #condRESET := #i.cmd.deact OR (#type <> 1) OR NOT (#i.status.ilactlower AND #i.ind.man);
+	    
+	    #i.man.lower := (#i.man.lower OR #condSET) AND NOT #condRESET;
+	    
+	END_REGION
+	
+	REGION FAULT  NW:11-15
+	    
+	    //Network11: FAULT: Fail to activate main route
+	    
+	    "AFC_AlarmAckn"(trigger := (NOT #i.status.vfbmain AND #i.out.actmain) OR (#i.status.vfbdeact AND #i.out.actmain),
+	                    release := NOT #i.sim.main,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_ftamain,
+	                    alarm => #faults.ctrl.alarm_ftamain,
+	                    siren => #faults.status.siren_ftamain,
+	                    hmiackn := #faults.status.hmiackn_ftamain,
+	                    Data := #i.faults.ftamain);
+	    
+	    //Network12: FAULT: Fail to activate upper route
+	    
+	    "AFC_AlarmAckn"(trigger := NOT #i.status.vfbupper AND #i.out.actupper,
+	                    release := NOT #i.sim.upper AND #type = 1,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_ftaupper,
+	                    alarm => #faults.ctrl.alarm_ftaupper,
+	                    siren => #faults.status.siren_ftaupper,
+	                    hmiackn := #faults.status.hmiackn_ftaupper,
+	                    Data := #i.faults.ftaupper);
+	    
+	    //Network13: FAULT: Fail to activate lower route
+	    
+	    #condSET := NOT (#i.status.vfbdeact OR #i.out.actmain OR #i.out.actupper OR #i.out.actlower) OR
+	    NOT (#i.out.actmain OR #i.out.actupper OR #i.out.actlower) AND (#i.status.vfbmain OR #i.status.vfbupper OR #i.status.vfblower);
+	    
+	    "AFC_AlarmAckn"(trigger := NOT #i.status.vfblower AND #i.out.actlower,
+	                    release := NOT #i.sim.lower AND #type = 1,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_ftalower,
+	                    alarm => #faults.ctrl.alarm_ftalower,
+	                    siren => #faults.status.siren_ftalower,
+	                    hmiackn := #faults.status.hmiackn_ftalower,
+	                    Data := #i.faults.ftalower);
+	    
+	    //Network14: FAULT: Fail to deactivate
+	    
+	    #condSET := NOT (#i.status.vfbdeact OR #i.out.actmain OR #i.out.actupper OR #i.out.actlower) OR
+	    NOT (#i.out.actmain OR #i.out.actupper OR #i.out.actlower) AND (#i.status.vfbmain OR #i.status.vfbupper OR #i.status.vfblower);
+	    
+	    "AFC_AlarmAckn"(trigger := #condSET,
+	                    release := NOT #i.sim.deact,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_ftd,
+	                    alarm => #faults.ctrl.alarm_ftd,
+	                    siren => #faults.status.siren_ftd,
+	                    hmiackn := #faults.status.hmiackn_ftd,
+	                    Data := #i.faults.ftd);
+	    
+	    //Network15: FAULT: Interlock violation
+	    
+	    #condSET := (#actmain AND #blockmain) OR (#actupper AND #blockupper) OR (#actlower AND #blocklower);
+	    
+	    "AFC_AlarmAckn"(trigger := #condSET,
+	                    release := NOT (#i.status.ilactmain OR #i.status.ilactupper OR #i.status.ilactlower),
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_il,
+	                    alarm => #faults.ctrl.alarm_il,
+	                    siren => #faults.status.siren_il,
+	                    hmiackn := #faults.status.hmiackn_il,
+	                    Data := #i.faults.il);
+	    
+	END_REGION
+	
+	REGION STATUS  NW:16-21
+	    
+	    //Network16: STATUS: General Fault
+	    
+	    #i.status.fault := #i.faults.ftamain.status.alarm OR #i.faults.ftaupper.status.alarm OR #i.faults.ftalower.status.alarm OR #i.faults.ftd.status.alarm OR #i.faults.il.status.alarm;
+	    
+	    //Network17: STATUS: "Interlock activate main"
+	    
+	    #i.status.ilactmain := NOT (#blockmain OR #i.status.fault OR #i.out.actupper OR #i.out.actlower);
+	    
+	    //Network18: STATUS: "Interlock activate upper s/l"
+	    
+	    #i.status.ilactupper := NOT (#blockupper OR #i.status.fault OR #i.out.actmain OR #i.out.actlower);
+	    
+	    //Network19: STATUS: "Interlock activate lower s/l"
+	    
+	    #i.status.ilactlower := NOT (#blocklower OR #i.status.fault OR #i.out.actupper OR #i.out.actmain);
+	    
+	    //Network20: STATUS: Valve Graphic
+	    
+	    #i.status.icon := 0;
+	    
+	    IF #i.status.vfbmain AND #i.out.actmain AND NOT #i.status.fault
+	    THEN
+	        #i.status.icon := 1;
+	    ELSIF #i.status.vfbupper AND #i.out.actupper AND NOT #i.status.fault
+	    THEN
+	        #i.status.icon := 2;
+	    ELSIF #i.status.vfblower AND #i.out.actlower AND NOT #i.status.fault
+	    THEN
+	        #i.status.icon := 3;
+	    ELSIF #i.status.fault AND #blink
+	    THEN
+	        #i.status.icon := 4;
+	    END_IF;
+	    
+	    
+	    //Network21: STATUS: Manual control buttons
+	    
+	    #i.ind.main := #i.man.main AND #i.ind.man;
+	    #i.ind.upper := #i.man.upper AND #i.ind.upper;
+	    #i.ind.lower := #i.man.lower AND #i.ind.lower;
+	    #i.ind.deact := #i.ind.man AND NOT (#i.man.main OR #i.man.upper OR #i.man.lower);
+	    
+	END_REGION
+	
+	REGION OUTPUT NW: 22-24
+	    
+	    //Network22: OUTPUT: Activate main route
+	    
+	    #condSET := #i.man.main OR (#actmain AND #i.ind.auto);
+	    #condRESET := NOT #i.status.ilactmain;
+	    
+	    "AFC_DelayONOFF"(cmd := #condSET,
+	                     Pulse := #p100ms,
+	                     Reset := #condRESET,
+	                     on => #i.out.actmain,
+	                     Data := #i.delaymain);
+	    
+	    //Network23: OUTPUT: Activate upper s/l route
+	    
+	    #condSET := #i.man.upper OR (#actupper AND #i.ind.auto);
+	    #condRESET := #type = 1 OR NOT #i.status.ilactupper;
+	    
+	    "AFC_DelayONOFF"(cmd := #condSET,
+	                     Pulse := #p100ms,
+	                     Reset := #condRESET,
+	                     on => #i.out.actupper,
+	                     Data := #i.delayupper);
+	    
+	    //Network24: OUTPUT: Activate lower s/l route
+	    
+	    #condSET := #i.man.lower OR (#actlower AND #i.ind.auto);
+	    #condRESET := #type = 1 OR NOT #i.status.ilactlower;
+	    
+	    "AFC_DelayONOFF"(cmd := #condSET,
+	                     Pulse := #p100ms,
+	                     Reset := #condRESET,
+	                     on => #i.out.actlower,
+	                     Data := #i.delaylower);
+	    
+	END_REGION
+	
+	REGION OUTPUT NW: 25
+	    
+	    //Network25: GEN: Move UDT outputs to FC outputs
+	    
+	    #main := #i.out.actmain;
+	    #upper := #i.out.actupper;
+	    #lower := #i.out.actlower;
+	    #vfbmain := #i.status.vfbmain;
+	    #vfbupper := #i.status.vfbupper;
+	    #vfblower := #i.status.vfblower;
+	    #vfbdeact := #i.status.vfbdeact;
+	    
+	END_REGION
+	
+	REGION BUTTON NW: 26
+	    
+	    //Network26: EXTRA: Button treatment
+	    
+	    IF #i.ind.auto THEN
+	        #i.cmd.auto := FALSE;
+	    END_IF;
+	    
+	    IF #i.ind.man THEN
+	        #i.cmd.man := FALSE;
+	    END_IF;
+	    
+	    IF #i.ind.main OR #i.ind.auto OR NOT #i.status.ilactmain THEN
+	        #i.cmd.main := FALSE;
+	    END_IF;
+	    
+	    IF #i.ind.upper OR #i.ind.auto OR NOT #i.status.ilactupper THEN
+	        #i.cmd.upper := FALSE;
+	    END_IF;
+	    
+	    IF #i.ind.lower OR #i.ind.auto OR NOT #i.status.ilactlower THEN
+	        #i.cmd.lower := FALSE;
+	    END_IF;
+	    
+	    IF #i.ind.deact OR #i.ind.auto THEN
+	        #i.cmd.deact := FALSE;
+	    END_IF;
+	    
+	    IF #i.status.fault THEN
+	        #i.faults.fpreset := FALSE;
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

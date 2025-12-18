@@ -1,0 +1,62 @@
+﻿FUNCTION_BLOCK "C_MTRDIR"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      enable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      index : Int;
+      cmd : Bool;
+   END_VAR
+
+   VAR 
+      status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_STATUS_MTRDIR";
+   END_VAR
+
+   VAR_TEMP 
+      module : "UDT_MOTORDIRECT";
+      resetStatus : "UDT_STATUS_MTRDIR";
+   END_VAR
+
+
+BEGIN
+	IF #enable THEN
+	    
+	    #status.enabled := TRUE;
+	    
+	    #module := "MOD".MTRDIR[#index].i;
+	    
+	    REGION STATUS
+	        
+	        #status.running := #module.status.vfb;
+	        
+	        #status.justStarted := "detectPE"(newValue := #status.running, oldValue := #status.old.running);
+	        #status.justStopped := "detectNE"(newValue := #status.running, oldValue := #status.old.running);
+	        #status.justHadFault := "detectPE"(newValue := #status.inFault, oldValue := #status.old.fault);
+	        #status.justLostFault := "detectNE"(newValue := #status.inFault, oldValue := #status.old.fault);
+	        
+	        #status.old.running := #status.running;
+	        #status.old.fault := #status.inFault;
+	        
+	    END_REGION
+	    
+	    REGION COMMAND
+	        
+	        "MOD".MTRDIR[#index].start := #cmd;
+	        
+	    END_REGION
+	    
+	    REGION SIM
+	        
+	        "MOD".MTRDIR[#index].i.sim.fb := "MODULES_CTRL".MTRDIR[#index].sim.simFb;
+	        "MOD".MTRDIR[#index].i.sim.ctrl := "MODULES_CTRL".MTRDIR[#index].sim.simCtrl;
+	        
+	    END_REGION
+	    
+	ELSE
+	    
+	    #status := #resetStatus;
+	    
+	    "MOD".MTRDIR[#index].start := FALSE;
+	    
+	END_IF;
+END_FUNCTION_BLOCK
+

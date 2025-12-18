@@ -1,0 +1,32 @@
+﻿FUNCTION "Indications" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_TEMP 
+      tempLastTT : Real;   //  Temporary value for the last temperature transmitter output
+   END_VAR
+
+
+BEGIN
+	REGION Cabinet ( number of cabinet )
+	
+	    // Indication: Beacon operating GREEN color
+	    
+	    
+	    // Indication: Beacon "Fault" RED color
+	
+	    
+	    // Indication: Beacon Siren
+	    
+	    
+	    // Indication: Led blue of reset button
+	    
+	    
+	    // Indication: Reset
+	     
+	        
+	 END_REGION
+	
+	 
+	
+END_FUNCTION
+

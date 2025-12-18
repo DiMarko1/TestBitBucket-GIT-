@@ -1,0 +1,54 @@
+﻿FUNCTION "Proc_MTR" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      i : Int;
+   END_VAR
+
+   VAR_IN_OUT 
+      module : "AFB_MotorPID_v3";
+   END_VAR
+
+
+BEGIN
+	IF "DB_System".modulesGroup.MTR AND "MODULES_CTRL".MTR[#i].status THEN
+	    
+	    // PI: INPUT
+	    
+	    
+	    // IMPLICIT INPUT
+	    
+	    #module.generalackn := "generalAckn";
+	    #module.reset := "ResetFaults";
+	    #module.mute := "MuteHorn";
+	    #module.autoset := "AutoSET";
+	    #module.manualset := "ManualSET";
+	    #module.p1s := "p1s";
+	    #module.p100ms := "p100ms";
+	    #module.blink := "blink";
+	    
+	    // EXPLICIT INPUT
+	    
+	    "explicitInput_MTR"(i:=#i,
+	                        module:=#module);
+	    
+	    // Run Module
+	    
+	    #module(faults:="FAULTS".MTR[#i]);
+	    
+	    // PI: OUTPUT
+	    
+	    
+	    // EXPLICIT OUTPUT
+	    
+	    "explicitOutput_MTR"(i:=#i,
+	                         module:=#module);
+	    
+	ELSE
+	    
+	    #module.run := FALSE;
+	    #module.reference := 0;
+	    
+	END_IF;
+END_FUNCTION
+

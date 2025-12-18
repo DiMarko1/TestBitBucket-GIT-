@@ -1,0 +1,54 @@
+﻿FUNCTION_BLOCK "C_ADIN"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      enable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      index : Int;
+   END_VAR
+
+   VAR 
+      status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_STATUS_DIN";
+   END_VAR
+
+   VAR_TEMP 
+      module : "UDT_ADIN";
+      resetStatus : "UDT_STATUS_AIN";
+   END_VAR
+
+
+BEGIN
+	IF #enable THEN
+	    
+	    #status.enabled := TRUE;
+	    
+	    #module := "MOD".ADIN[#index].i;
+	    
+	    REGION STATUS
+	        
+	        #status.switch := #module.status.switch_active;
+	        #status.fault := #module.status.fault;
+	        
+	        #status.justActivated := "detectPE"(newValue := #status.switch, oldValue := #status.old.switch);
+	        #status.justDectivated := "detectNE"(newValue := #status.switch, oldValue := #status.old.switch);
+	        #status.justHadFault := "detectPE"(newValue := #status.fault, oldValue := #status.old.fault);
+	        #status.justLostFault := "detectNE"(newValue := #status.fault, oldValue := #status.old.fault);
+	        
+	        #status.old.switch := #status.switch;
+	        #status.old.fault := #status.fault;
+	        
+	    END_REGION
+	    
+	    REGION SIM
+	        
+	        "MOD".ADIN[#index].i.sim.simulated := "MODULES_CTRL".ADIN[#index].sim."en";
+	        "MOD".ADIN[#index].i.sim.forced := "MODULES_CTRL".ADIN[#index].sim.value;
+	        
+	    END_REGION
+	    
+	ELSE
+	    
+	    #status.enabled := FALSE;
+	    
+	END_IF;
+END_FUNCTION_BLOCK
+

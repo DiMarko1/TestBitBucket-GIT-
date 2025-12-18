@@ -1,0 +1,111 @@
+﻿FUNCTION_BLOCK "C_VLV"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      enable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE: Enable module
+      index : Int;   //  INDEX
+      cmd : Bool;   //  TRUE: Activate main
+      upper : Bool;   //  TRUE: Activate upper
+      lower : Bool;   //  TRUE: Activate lower
+      blockMain : Bool;   //  TRUE: Block main activation
+      blockUpper : Bool;   //  TRUE: Block upper activation
+      blockLower : Bool;   //  TRUE: Block lower activation
+   END_VAR
+
+   VAR_OUTPUT 
+      vfbMain { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      hasJustAct { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      vfbDeact { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      hasjustDeact { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      fault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      justHadFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      justLostFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      enabled { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      auto { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_VAR
+
+   VAR 
+      status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_STATUS_VLV";
+   END_VAR
+
+   VAR_TEMP 
+      module : "UDT_VALVE";
+      resetStatus : "UDT_STATUS_VLV";
+   END_VAR
+
+
+BEGIN
+	
+	
+	IF #enable THEN
+	     
+	     #status.enabled := TRUE;
+	     
+	     #module := "MOD".VLV[#index].i;
+	     
+	     REGION STATUS
+	          
+	          #status.isAct := #module.status.vfbmain;
+	          #status.inFault := #module.status.fault;
+	          
+	          #status.hasJustAct := "detectPE"(newValue := #status.isAct, oldValue := #status.old.position);
+	          #status.hasjustDeact := "detectNE"(newValue := #status.isAct, oldValue := #status.old.position);
+	          #status.justHadFault := "detectPE"(newValue := #status.inFault, oldValue := #status.old.fault);
+	          #status.justLostFault := "detectNE"(newValue := #status.inFault, oldValue := #status.old.fault);
+	          
+	          #status.auto := #module.ind.auto;
+	          
+	          #status.old.position := #status.isAct;
+	          #status.old.fault := #status.inFault;
+	          
+	     END_REGION
+	     
+	     REGION COMMAND
+	          
+	          "MOD".VLV[#index].actmain := #cmd;
+	          "MOD".VLV[#index].actupper := #upper;
+	          "MOD".VLV[#index].actlower := #lower;
+	          "MOD".VLV[#index].blockmain := #blockMain;
+	          "MOD".VLV[#index].blockupper := #blockUpper;
+	          "MOD".VLV[#index].blocklower := #blockLower;
+	          
+	          
+	     END_REGION
+	     
+	     REGION SIM
+	          
+	          // "MOD".VLV[#index].i.sim.main := "MODULES_CTRL".VLV[#index].sim.simMain AND NOT "MODULES_CTRL".VLV[#index].sim.simDeact;
+	          // "MOD".VLV[#index].i.sim.upper := "MODULES_CTRL".VLV[#index].sim.simLower;
+	          // "MOD".VLV[#index].i.sim.lower := "MODULES_CTRL".VLV[#index].sim.simUpper;
+	          // "MOD".VLV[#index].i.sim.deact := "MODULES_CTRL".VLV[#index].sim.simDeact;
+	          
+	     END_REGION
+	     
+	ELSE
+	    ;
+	     // #status := #resetStatus;
+	     
+	     // "MOD".VLV[#index].actmain := FALSE;
+	     // "MOD".VLV[#index].actupper := FALSE;
+	     // "MOD".VLV[#index].actlower := FALSE;
+	     // "MOD".VLV[#index].blockmain := FALSE;
+	     // "MOD".VLV[#index].blockupper := FALSE;
+	     // "MOD".VLV[#index].blocklower := FALSE;
+	     
+	END_IF;
+	
+	REGION Output
+	     
+	     #vfbMain := #status.isAct;
+	     #hasJustAct := #status.hasJustAct;
+	     #vfbDeact := #status.isDeact;
+	     #hasjustDeact := #status.hasjustDeact;
+	     #fault := #status.inFault;
+	     #justHadFault := #status.justHadFault;
+	     #justLostFault := #status.justLostFault;
+	     #enabled := #status.enabled;
+	     #auto := #status.auto;
+	     
+	END_REGION Output
+END_FUNCTION_BLOCK
+

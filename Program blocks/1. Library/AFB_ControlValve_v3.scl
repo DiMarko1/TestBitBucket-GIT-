@@ -1,0 +1,359 @@
+﻿FUNCTION_BLOCK "AFB_ControlValve_v3"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      control { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Request for auto control
+      spsource { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0=internal setpoint, 1=external setpoint
+      followup { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0=motor control from PID, 1=motor setpoint directly from program
+      pidrun { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0=controller not ready, controller is running
+      block { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Block control of valve
+      p1s { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse that is generated every 1 sec
+      p100ms { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse that is generated every 100 msec
+      blink { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Blink that is used for the graphics
+      PV { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Reference for PID
+      PV_unit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : WString;   // Peripheral value unit
+      EXT_SP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // External setpoint
+      FUP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Follow up value
+      Out_unit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : WString;   // Output unit (If nothing is entered then it is from the HMI)
+   END_VAR
+
+   VAR_OUTPUT 
+      reference { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Valve reference
+   END_VAR
+
+   VAR RETAIN
+      i : "UDT_CONTROLVALVE";   // UDT containing control valve data
+   END_VAR
+   VAR 
+      cont { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Controller
+         COM_RST { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Restart command
+         MAN_ON { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual control
+         SP_INT { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Setpoint internal
+         PV_IN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Peripheral value
+         GAIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Proportional gain loaded according to the action (signed)
+         TI { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Time;   // Integral time
+         TD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Time;   // Derivative time
+         LMN_HLM { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Controller's higher LMN value (%)
+         LMN_LLM { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Controller's lower LMN value (%)
+         LMN_FAC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // LMN factor
+         LMN_OFF { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // LMN offset
+         I_ITLVAL { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Controller's integral initialization value (%)
+         LMN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Controller's manipulated value
+      END_STRUCT;
+      calc { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Calculations for scaling process
+         inspan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Scaling span
+         outspan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Channel span
+         xmax { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Channel maximum value
+         xmin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Channel minimum value
+         ymax { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Output maximum value
+         ymin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Output minimum value
+         x { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Active x value (channel)
+         y { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Active y value (output)
+         sign { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Linear scaling slope sign
+      END_STRUCT;
+   END_VAR
+
+   VAR_TEMP 
+      condSET : Bool;
+      condRESET : Bool;
+   END_VAR
+
+
+BEGIN
+	REGION GEN  NW:2
+	    
+	    //Network2: GEN: Move FC inputs to UDT inputs
+	    
+	    #i.pid.spsource := #spsource;
+	    #i.pid.followup := #followup;
+	    #i.pid.pidrun := #pidrun;
+	    #i.pid.PV := #PV;
+	    #i.pid.EXT_SP := #EXT_SP;
+	    #i.pid.FUP := #FUP;
+	    #i.pid.pvunit := #PV_unit;
+	    
+	    IF #Out_unit <> WSTRING#'' THEN
+	        #i.pid.outunit := #Out_unit;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION STATUS  NW:3
+	    
+	    //Network3: STATUS: Start interlock
+	    
+	    #i.status.ilstart := NOT #block AND #i.unscale.set;
+	    
+	END_REGION
+	
+	REGION FEEDBACK  NW:4-5
+	    
+	    //Network4: FEEDBACK: Virtual feedback "Open"
+	    
+	    #i.out.vfbact := #i.pid.OP > #i.unscale.inlow;
+	    
+	    //Network5: FEEDBACK: Virtual feedback "Close"
+	    
+	    #i.out.vfbdeact := #i.pid.OP <= #i.unscale.inlow;
+	    
+	END_REGION
+	
+	REGION OUTPUT  NW:6
+	    
+	    //Network6: OUTPUT: Enable control of valve
+	    
+	    #i.out.control := #i.status.ilstart AND (#control OR #i.pid.mode);
+	    
+	END_REGION
+	
+	REGION LOAD PID  NW:7
+	    
+	    //Network7: CONTROLLER: Load from PID block
+	    
+	    #i.pid.LMN := #cont.LMN;
+	    
+	END_REGION
+	
+	REGION PID  NW:8-14
+	    
+	    //Network8: PID: Manage controller's limits
+	    
+	    IF #i.pid.H <= #i.pid.L THEN
+	        #i.pid.H := #i.pid.L := #calc.xmin;
+	    END_IF;
+	    
+	    IF #i.pid.H > #calc.xmax THEN
+	        #i.pid.H := #calc.xmax;
+	    END_IF;
+	    
+	    IF #i.pid.L < #calc.xmin THEN
+	        #i.pid.L := #calc.xmin;
+	    END_IF;
+	    
+	    IF (#i.pid.ITLVAL < #i.pid.L) AND (#i.pid.ITLVAL > #i.pid.H) THEN
+	        #i.pid.ITLVAL := #calc.xmin;
+	    END_IF;
+	    
+	    IF (#i.pid.OFFVAL < #i.pid.L) AND (#i.pid.ITLVAL > #i.pid.H) THEN
+	        #i.pid.OFFVAL := #calc.xmin;
+	    END_IF;
+	    
+	    //Network9: PID: Load SP
+	    
+	    IF #i.pid.spsource THEN
+	        #i.pid.SP := #i.pid.EXT_SP;
+	    END_IF;
+	    
+	    //Network10: PID: Determine if initialization routine is required
+	    
+	    #i.pid.init.req := (#i.pid.ITLVAL > #i.pid.L) AND (#i.pid.init.dur > 0.0);
+	    
+	    //Network11: PID: Determine the delay SP
+	    
+	    IF NOT #i.out.control AND #i.pid.init.req THEN
+	        #i.pid.init.delay.in.spon := #i.pid.init.dur;
+	    END_IF;
+	    
+	    IF NOT #i.out.control AND NOT #i.pid.init.req THEN
+	        #i.pid.init.delay.in.spon := 0.0;
+	    END_IF;
+	    
+	    IF #i.pid.mode = #i.pid.followup THEN
+	        #i.pid.init.delay.in.spon := 0.0;
+	    END_IF;
+	    
+	    //Network12: PID: Delay for holding an init value
+	    
+	    "AFC_DelayONOFF"(cmd := #i.out.control,
+	                     Pulse := #p100ms,
+	                     Reset := NOT #i.out.control,
+	                     on => #i.pid.init.delay.out.on,
+	                     Data := #i.pid.init.delay);
+	    
+	    //Network13: PID: Reset the controller
+	    
+	    #i.pid.cmdrst := NOT #i.pid.init.delay.out.on OR #i.pid.mode OR #i.pid.followup;
+	    
+	    //Network14: PID: Load output
+	    
+	    IF NOT #i.pid.mode THEN
+	        
+	        IF #i.out.control THEN
+	            
+	            IF NOT #i.pid.followup THEN
+	                
+	                IF #i.pid.pidrun THEN
+	                    #i.pid.OP := #i.pid.LMN;
+	                END_IF;
+	                
+	                IF #i.pid.cmdrst THEN
+	                    #i.pid.OP := #i.pid.ITLVAL;
+	                END_IF;
+	                
+	            END_IF;
+	            
+	        ELSIF #i.pid.followup THEN
+	            
+	            #i.pid.OP := #i.pid.FUP;
+	            
+	        END_IF;
+	        
+	    ELSIF #i.pid.mode THEN
+	        
+	        IF NOT #i.out.control THEN
+	            #i.pid.OP := #i.pid.OFFVAL;
+	        END_IF;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION UNSCALE  NW:15-19
+	    
+	    //Network15: UNSCALE: Move input
+	    
+	    #i.unscale.in := #i.pid.OP;
+	    
+	    //Network16: UNSCALE: Cross-check unscaling setup
+	    
+	    #i.unscale.set := (#i.unscale.inhigh <> #i.unscale.inlow) AND (#i.unscale.outhigh <> #i.unscale.inlow);
+	    
+	    //Network17: UNSCALE: Determine sign of scaling slope and calculation operands (Hi - Low)
+	    
+	    IF #i.unscale.set THEN
+	        #calc.inspan := #i.unscale.inhigh - #i.unscale.inlow;
+	        #calc.outspan := #i.unscale.outhigh - #i.unscale.outlow;
+	        #calc.x := #i.unscale.in;
+	        IF #calc.inspan > 0 AND #calc.outspan > 0 THEN
+	            #calc.sign := TRUE;
+	            #calc.ymax := #i.unscale.outhigh;
+	            #calc.ymin := #i.unscale.outlow;
+	            #calc.xmax := #i.unscale.inhigh;
+	            #calc.xmin := #i.unscale.inlow;
+	        ELSIF #calc.inspan < 0 AND #calc.outspan < 0 THEN
+	            #calc.sign := TRUE;
+	            #calc.ymax := #i.unscale.outlow;
+	            #calc.ymin := #i.unscale.outhigh;
+	            #calc.xmax := #i.unscale.inlow;
+	            #calc.xmin := #i.unscale.inhigh;
+	        ELSIF #calc.inspan < 0 AND #calc.outspan > 0 THEN
+	            #calc.sign := FALSE;
+	            #calc.ymax := #i.unscale.outlow;
+	            #calc.ymin := #i.unscale.outhigh;
+	            #calc.xmax := #i.unscale.inhigh;
+	            #calc.xmin := #i.unscale.inlow;
+	        ELSE
+	            #calc.sign := FALSE;
+	            #calc.ymax := #i.unscale.outhigh;
+	            #calc.ymin := #i.unscale.outlow;
+	            #calc.xmax := #i.unscale.inlow;
+	            #calc.xmin := #i.unscale.inhigh;
+	        END_IF;
+	    ELSE
+	        #calc.inspan := #calc.outspan := #calc.xmax := #calc.xmin := #calc.ymax := #calc.ymin := 0;
+	    END_IF;
+	    
+	    //Network18: UNSCALE: Determine output
+	    
+	    IF #i.unscale.set AND #calc.sign THEN
+	        
+	        #calc.y := #calc.ymin + ((#calc.ymax - #calc.ymin) * (#calc.x - #calc.xmin) / (#calc.xmax - #calc.xmin));
+	        
+	        IF #calc.x <= #calc.xmin THEN
+	            #calc.y := #calc.ymin;
+	        END_IF;
+	        
+	        IF #calc.x >= #calc.xmax THEN
+	            #calc.y := #calc.ymax;
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    IF #i.unscale.set AND NOT #calc.sign THEN
+	        
+	        #calc.y := #calc.ymin + ((#calc.ymax - #calc.ymin) * (#calc.xmax - #calc.x) / (#calc.xmax - #calc.xmin));
+	        
+	        IF #calc.x <= #calc.xmin THEN
+	            #calc.y := #calc.ymax;
+	        END_IF;
+	        
+	        IF #calc.x >= #calc.xmax THEN
+	            #calc.y := #calc.ymin;
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    IF #i.unscale.set THEN
+	        #i.unscale.output := #calc.y;
+	    END_IF;
+	    
+	    IF NOT #i.unscale.set THEN
+	        #i.unscale.output := 0.0;
+	    END_IF;
+	    
+	    //Network19: UNSCALE: Convert to INT
+	    
+	    #i.out."ref" := REAL_TO_INT(#i.unscale.output);
+	    
+	    
+	END_REGION
+	
+	REGION LOAD PID  NW:20
+	    
+	    //Network20: CONTROLLER: Load to PID block
+	    
+	    #cont.COM_RST := #i.pid.cmdrst;
+	    
+	    #cont.MAN_ON := #i.pid.mode;
+	    
+	    #cont.SP_INT := #i.pid.SP;
+	    
+	    #cont.PV_IN := #i.pid.PV;
+	    
+	    IF #i.pid.action THEN
+	        #cont.GAIN := ABS_REAL(#i.pid.P);
+	    ELSE
+	        #cont.GAIN := 0.0 - ABS_REAL(#i.pid.P);
+	    END_IF;
+	    
+	    #cont.TI := DINT_TO_TIME(#i.pid.I);
+	    
+	    #cont.TD := DINT_TO_TIME(#i.pid.D);
+	    
+	    #cont.LMN_HLM := ((#i.pid.H - #calc.xmin) / (#calc.xmax - #calc.xmin)) * 100.0;
+	    
+	    #cont.LMN_LLM := ((#i.pid.L - #calc.xmin) / (#calc.xmax - #calc.xmin)) * 100.0;
+	    
+	    #cont.LMN_FAC := (#calc.xmax - #calc.xmin) / 100.0;
+	    
+	    #cont.LMN_OFF := #calc.xmin;
+	    
+	    #cont.I_ITLVAL := ((#i.pid.OP - #calc.xmin) / (#calc.xmax - #calc.xmin)) * 100.0;
+	    
+	END_REGION
+	
+	REGION STATUS  NW:21
+	    
+	    //Network21: STATUS: Icon
+	    
+	    #i.status.icon := 0;
+	    
+	    IF #i.out.vfbact
+	    THEN
+	        #i.status.icon := 1;
+	    ELSIF FALSE AND #blink
+	    THEN
+	        #i.status.icon := 3;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION OUTPUT  NW:22
+	    
+	    //Network22: OUTPUT: Move to FC outputs
+	    
+	    #reference := #i.out."ref";
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

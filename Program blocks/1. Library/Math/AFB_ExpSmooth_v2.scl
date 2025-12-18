@@ -1,0 +1,100 @@
+﻿FUNCTION_BLOCK "AFB_ExpSmooth_v2"
+TITLE = AFB_ExpSmooth_v2
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : CH
+FAMILY : Aktina
+NAME : Global
+VERSION : 0.1
+//AFB_ExpSmooth_v2
+   VAR_INPUT 
+      In { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Real to be smoothed
+      p1s : Bool;   // Pulse for 1 s
+      reset : Bool;   // Reset faults
+      t_sys {InstructionName := 'DTL'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DTL;   // System time
+   END_VAR
+
+   VAR_OUTPUT 
+      Out { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Scaled Value
+   END_VAR
+
+   VAR RETAIN
+      i : "UDT_EXPSM";   // UDT containing faceplate data
+      exp : Struct   // Exponential smoothing operands
+         init : Bool;   // Initialization routine
+         Sn : Real;   // Sn = n - output of smoothing
+         Xn : Real;   // Xn = n - sample of analog value
+         lim_up : Real;   // Limit up
+         lim_down : Real;   // Limit down
+         t_buf {InstructionName := 'DTL'; LibVersion := '1.0'} : DTL;   // Time buffering from last call of the function
+         t_diff : Bool;   // t_diff = t_sys - t_buf (Ltime, ns)
+      END_STRUCT;
+   END_VAR
+   VAR 
+      err : Int;
+      startob_si {InstructionName := 'SI_classic'; LibVersion := '1.0'; S7_SetPoint := 'False'} : SI_classic;
+      lastob_si {InstructionName := 'SI_classic'; LibVersion := '1.0'; S7_SetPoint := 'False'} : SI_classic;
+      logical1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_VAR
+
+
+BEGIN
+	// Import value
+	#i.actual := #In;
+	
+	// Check if smoothing is enabled
+	IF #i.exp_sm AND NOT #i.simcmd THEN
+	    
+	    // Check system
+	    #err := RD_SINFO(TOP_SI => #lastob_si, START_UP_SI => #startob_si);
+	    
+	    // Init routine
+	    IF #lastob_si.EV_NUM = 1 OR #lastob_si.EV_NUM = 2 OR #lastob_si.EV_NUM = 4 THEN
+	        #exp.init := false;
+	    END_IF;
+	    
+	    // Enter routine
+	    #exp.Xn := #i.actual;
+	    #exp.lim_up := #exp.Xn + #i.limit;
+	    #exp.lim_down := #exp.Xn - #i.limit;
+	    
+	   // #exp.t_diff := T_DIFF(IN1 := #t_sys, IN2 := #exp.t_buf);
+	    //#i.dt := UDINT_TO_REAL(LTIME_TO_UDINT(#exp.t_diff)) / 1000000.0;
+	    
+	    IF #i.T <= 0 THEN // Force the period to be higher than 0 to avoid infinity on the exponent
+	        #i.T := #i.dt / 1000.0;
+	    END_IF;
+	    
+	    IF #i.dt > 0 AND #i.T > #i.dt / 1000.0 THEN
+	        #i.a := 1 - EXP(- #i.dt / (1000.0 * #i.T));
+	    END_IF;
+	    
+	(* startup initialisation *)
+	    IF NOT #exp.init OR #i.a <= 0 OR #i.a >= 1 THEN
+	        #exp.init := TRUE;
+	        #exp.Sn := #exp.Xn;
+	    ELSIF #exp.Sn >= #exp.lim_down AND #exp.Sn <= #exp.lim_up THEN
+	        #exp.Sn := #exp.Xn;
+	    ELSE
+	        #exp.Sn := #exp.Sn + (#exp.Xn - #exp.Sn) * #i.a;
+	    END_IF;
+	    
+	ELSIF #i.simcmd THEN
+	    #exp.init := false;
+	    #exp.Xn := #i.actual;
+	    #exp.Sn := #i.simvalue;
+	ELSE
+	    #exp.init := false;
+	    #exp.Xn := #i.actual;
+	    #exp.Sn := #i.actual;
+	        
+	END_IF;
+	
+	// Buffering
+	#exp.t_buf := #t_sys;
+	#i.output := #exp.Sn;
+	
+	RETURN;
+	
+	
+END_FUNCTION_BLOCK
+

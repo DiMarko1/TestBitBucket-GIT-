@@ -1,0 +1,165 @@
+﻿FUNCTION "quickSetup" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_IN_OUT 
+      setup : "modTypes";   //  TRUE: Quick setup of the selected type
+   END_VAR
+
+   VAR_TEMP 
+      i : DInt;   //  Temporary indexer
+   END_VAR
+
+
+BEGIN
+	
+	REGION PUT / GET
+	    // Statement section REGION
+	    "GET_DB"(REQ:="p100ms",
+	             ID:=W#16#100,
+	             ADDR_1:=P#I512.0 DWORD 8,
+	             RD_1:=P#M512.0 DWORD 8);
+	
+	END_REGION
+	
+	REGION sim
+	    FOR #i := 0 TO "M_MTRDIR" DO
+	        "MODULES_CTRL".MTRDIR[#i].status := TRUE;
+	        // "MOD".MTRDIR[#i].i.sim.fb := FALSE;
+	        // "MOD".MTRDIR[#i].i.sim.ctrl := FALSE;
+	        // "MODULES_CTRL".MTRDIR[#i].sim.simFb := TRUE;
+	        // "MODULES_CTRL".MTRDIR[#i].sim.simCtrl := TRUE;
+	        
+	        // "MOD".MTRDIR[#i].i.faults.ftr.setup.spon := 125;
+	    END_FOR;
+	    
+	    FOR #i := 0 TO "M_MTR" DO
+	        "MODULES_CTRL".MTR[#i].status := TRUE;
+	        // "MOD".MTR[#i].i.sim.fb := FALSE;
+	        // "MOD".MTR[#i].i.sim.ctrl := FALSE;
+	        //"MODULES_CTRL".MTR[#i].sim.simFb := TRUE;
+	        //"MODULES_CTRL".MTR[#i].sim.simCtrl := TRUE;
+	        
+	        //"MOD".MTR[#i].i.delay.in.spon := 0.5;
+	    END_FOR;
+	    
+	    FOR #i := 0 TO "M_AIN" DO
+	        "MODULES_CTRL".AIN[#i].status := TRUE;
+	    END_FOR;
+	    
+	    FOR #i := 0 TO "M_DIN" DO
+	        "MODULES_CTRL".DIN[#i].status := TRUE;
+	    END_FOR;
+	    
+	    FOR #i := 0 TO "M_VLV" DO
+	        "MODULES_CTRL".VLV[#i].status := TRUE;
+	        //"MOD".VLV[#i].i.delaymain.in.spoff := 0.5;
+	        // "MOD".VLV[#i].i.sim.main := TRUE;
+	        // "MOD".VLV[#i].i.sim.deact := TRUE;
+	    END_FOR;
+	    
+	    
+	END_REGION
+	
+	
+	REGION modules
+	    REGION Control valves
+	        
+	        // IF #setup.cvlv = TRUE THEN // Setup
+	        
+	        //      FOR #i := 0 TO "M_CVLV" DO
+	        //           "MOD".CVLV[#i].i.pid.H := 100.0;
+	        //           "MOD".CVLV[#i].i.pid.mode := FALSE;
+	        //           "MOD".CVLV[#i].i.unscale.inlow := 0.0;
+	        //           "MOD".CVLV[#i].i.unscale.inhigh := 100.0;
+	        //           "MOD".CVLV[#i].i.unscale.outlow := 4000.0;
+	        //           "MOD".CVLV[#i].i.unscale.outhigh := 20000.0;
+	        //      END_FOR;
+	        
+	        //      #setup.cvlv := FALSE; // Reset
+	        
+	        // END_IF;
+	        
+	    END_REGION Control valves     
+	    
+	    REGION Motors PID
+	        
+	        IF #setup.mtr = TRUE THEN // Setup
+	            
+	            FOR #i := 0 TO "M_MTR" DO
+	                "MOD".MTR[#i].i.cmd.auto := TRUE;
+	                "MOD".MTR[#i].i.faults.ftr.setup."en" := FALSE;
+	                "MOD".MTR[#i].i.faults.ftr.setup.spon := 2.0;
+	                "MOD".MTR[#i].i.faults.fts.setup."en" := FALSE;
+	                "MOD".MTR[#i].i.faults.fts.setup.spon := 6.0;
+	                "MOD".MTR[#i].i.faults.mcb.setup."en" := FALSE;
+	                "MOD".MTR[#i].i.faults.mcb.setup.spon := 2.0;
+	                "MOD".MTR[#i].i.faults.ctrl.setup."en" := FALSE;
+	                "MOD".MTR[#i].i.faults.ctrl.setup.spon := 2.0;
+	                "MOD".MTR[#i].i.faults.vfd.setup."en" := FALSE;
+	                "MOD".MTR[#i].i.faults.vfd.setup.spon := 5.0;
+	                "MOD".MTR[#i].i.unscale.inhigh := 100.0;
+	                "MOD".MTR[#i].i.unscale.outhigh := 100.0;
+	                "MOD".MTR[#i].i.pid.L := 10.0;
+	                "MOD".MTR[#i].i.pid.H := 100.0;
+	                "MOD".MTR[#i].i.pid.OP := 50.0;
+	                "MOD".MTR[#i].i.pid.P := 0.5;
+	                "MOD".MTR[#i].i.pid.I := 8000;
+	                "MOD".MTR[#i].i.pid.outunit := WSTRING#'%';
+	                
+	                "MOD".MTR[#i].i.pid.mode := TRUE;
+	                
+	            END_FOR;
+	            
+	            #setup.mtr := FALSE; // Reset
+	            
+	        END_IF;
+	        
+	    END_REGION Motors PID
+	    
+	    REGION Valves
+	        
+	        IF #setup.vlv = TRUE THEN
+	            
+	            FOR #i := 0 TO "M_VLV" DO // Setup
+	                "MOD".VLV[#i].i.faults.ftamain.setup."en" := TRUE;
+	                "MOD".VLV[#i].i.faults.ftamain.setup.spon := 6.0;
+	                "MOD".VLV[#i].i.faults.ftd.setup."en" := TRUE;
+	                "MOD".VLV[#i].i.faults.ftd.setup.spon := 6.0;
+	                
+	            END_FOR;
+	            
+	            #setup.vlv := FALSE; // Reset
+	            
+	        END_IF;
+	        
+	    END_REGION Valves
+	    
+	    REGION Analog sensors
+	        
+	        IF #setup.ain = TRUE THEN
+	            FOR #i := 0 TO 5 DO
+	                "MOD".AIN[#i].i.chn.type := 2;
+	                "MOD".AIN[#i].i.scale.factor := 0.01;
+	                "MOD".AIN[#i].i.unit := WSTRING#'mbar';
+	                
+	            END_FOR;
+	            
+	            FOR #i := 6 TO 11 DO
+	                "MOD".AIN[#i].i.chn.type := 2;
+	                "MOD".AIN[#i].i.scale.factor := 0.1;
+	                "MOD".AIN[#i].i.unit := WSTRING#'°C';
+	                
+	            END_FOR;
+	            
+	        END_IF;
+	        
+	        // Reset
+	        #setup.ain := FALSE;
+	        
+	    END_REGION Analog sensors
+	    
+	    #i := 0;
+	END_REGION
+	
+END_FUNCTION
+

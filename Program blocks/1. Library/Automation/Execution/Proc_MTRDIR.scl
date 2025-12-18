@@ -1,0 +1,57 @@
+﻿FUNCTION "Proc_MTRDIR" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      i : Int;
+   END_VAR
+
+   VAR_IN_OUT 
+      module : "AFB_MotorDirect_v3";
+   END_VAR
+
+
+BEGIN
+	IF "DB_System".modulesGroup.MTRDIR AND "MODULES_CTRL".MTRDIR[#i].status THEN
+	    
+	    // PI: INPUT
+	   
+	    
+	    // IMPLICIT INPUT
+	    
+	    #module.generalackn := "generalAckn";
+	    #module."reset" := "ResetFaults";
+	    #module.mute := "MuteHorn";
+	    #module."autoset" := "AutoSET";
+	    #module."manualset" := "ManualSET";
+	    #module.p1s := "p1s";
+	    #module.p100ms := "p100ms";
+	    #module.blink := "blink";
+	    
+	    //#module.block := "EMERGENCY";
+	    
+	    // EXPLICIT INPUT
+	    
+	    "explicitInput_MTRDIR"(i:=#i,
+	                           module:=#module);
+	    
+	    // Run Module
+	    
+	    #module(faults := "FAULTS".MTRDIR[#i]);
+	    
+	    // PI: OUTPUT
+	    
+	    
+	    // EXPLICIT OUTPUT
+	    
+	    "explicitOutput_MTRDIR"(i:=#i,
+	                            module:=#module);
+	    
+	ELSE
+	    
+	    #module.run := FALSE;
+	    
+	
+	    
+	END_IF;
+END_FUNCTION
+

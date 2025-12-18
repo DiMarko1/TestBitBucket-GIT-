@@ -1,0 +1,144 @@
+﻿FUNCTION_BLOCK "libMath_Total64REAL"
+TITLE = libMath_Total64REAL
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : CH
+FAMILY : Aktina
+NAME : MATH
+VERSION : 1.0
+//libMath_Total64REAL
+   VAR_INPUT 
+      pulse { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE: Add preset quantity to the totalizer
+      refresh : Bool;   //  TRUE: Refresh calculation of analytical preset number
+   END_VAR
+
+   VAR_IN_OUT 
+      "dt" : "typeTotal64REAL";   //  Totalizer's data
+   END_VAR
+
+   VAR 
+      statPulseOld { ExternalWritable := 'False'} : Bool;   //  Static value for 'pulse' input used for edge detection
+      statValid { ExternalWritable := 'False'} : Bool;   //  Static value for validating the preset conversion
+      statTotalInt { ExternalWritable := 'False'} : DInt;   //  Static value for the integer part of 'statTotal'
+      statTotalDec { ExternalWritable := 'False'} : DInt;   //  Static value for the decimal part of the 'statTotal'
+      statExp { ExternalWritable := 'False'} : DInt;   //  Static value for the power of 10 calculated by 10^precision
+      statTotal { ExternalWritable := 'False'} : LReal;   //  Static value for the 'total' output
+      statPreset { ExternalWritable := 'False'} : Real := 0.0;   //  Static value for the 'setup.preset' input
+      statPrecision { ExternalWritable := 'False'} : USInt;   //  Static value for the 'setup.precision' input
+      statPresetInt { ExternalWritable := 'False'} : DInt;   //  Static value for the integer part of 'setup.preset' input
+      statPresetDec { ExternalWritable := 'False'} : DInt;   //  Static value for the decimal part of 'setup.preset' input
+   END_VAR
+
+   VAR_TEMP 
+      tempPulse : Bool;   //  Temporary value for 'pulse' input
+      i : SInt;   //  Loop operand
+   END_VAR
+
+   VAR CONSTANT 
+      ctSP_MAX_PRECISION : USInt := 6;   //  Constant value for maximum value of 'dt.precision'
+   END_VAR
+
+
+BEGIN
+	REGION BLOCK HEADER
+	    //===============================================================================
+	    // CH / (c)Copyright (2023)
+	    //-------------------------------------------------------------------------------
+	    // Title:             (libMath_Total64REAL)
+	    // Comment/Function:  (Big numbers capabilities with precision of max 6 decimals)
+	    // Library/Family:    (Aktina\Tools\Math)
+	    // Author:            (CH)
+	    // Tested with:       (V16)
+	    // Engineering:       (TIA Step7 Professional V16)
+	    // Restrictions:      ()
+	    // Requirements:      (S7 CPUs)
+	    // Notes:             ()
+	    //-------------------------------------------------------------------------------
+	    // Change log table:
+	    // Version  | Date       | Dev in charge          | Changes
+	    //----------|------------|------------------------|------------------------------
+	    // 01.00.00 | 2023-02-06 | (CH)                   | First released version
+	    //===============================================================================
+	END_REGION
+	
+	REGION BLOCK NOTES
+	    //===============================================================================
+	    
+	    //===============================================================================
+	END_REGION
+	
+	REGION GENERIC PRE-INSTRUCTIONS
+	    // Work with temporary value / create process image
+	    #tempPulse := #pulse;
+	    
+	    // Reset totalizer
+	    IF (#dt.reset = TRUE) THEN
+	        #dt.output := 0.0;
+	    END_IF;
+	    
+	END_REGION GENERIC PRE-INSTRUCTIONS
+	
+	REGION REFRESH PRESET SETUP
+	    // Calculate power of 10 (max = 8)
+	    IF (#statPreset <> #dt.preset) OR (#statPrecision <> #dt.precision)
+	        OR (#statTotal <> #dt.output)
+	        OR (#refresh = TRUE) OR (#dt.reset = TRUE)
+	    THEN
+	        
+	        IF #dt.precision > #ctSP_MAX_PRECISION THEN
+	            #dt.precision := #ctSP_MAX_PRECISION;
+	        END_IF;
+	        
+	        #statExp := LREAL_TO_DINT(10 ** #dt.precision);
+	        
+	        // Calculate preset addition based on precision
+	        #statPresetInt := TRUNC_DINT(IN := #dt.preset);
+	        #statPresetDec := TRUNC_DINT((#dt.preset - DINT_TO_REAL(#statPresetInt)) * DINT_TO_REAL(#statExp));
+	        
+	        #statTotal := #dt.output;
+	        
+	        #statTotalInt := TRUNC_DINT(IN := #statTotal);
+	        #statTotalDec := TRUNC_DINT((#statTotal - DINT_TO_LREAL(#statTotalInt)) * DINT_TO_LREAL(#statExp));
+	        
+	        #statPreset := #dt.preset;
+	        #statPrecision := #dt.precision;
+	        
+	        #statValid := #statPresetDec < #statExp;
+	        
+	    END_IF;
+	    
+	END_REGION REFRESH PRESET SETUP
+	
+	REGION TOTALIZER
+	    
+	    IF (#tempPulse = TRUE) AND (#statPulseOld = FALSE) // edge only
+	        AND (#dt.preset > 0)
+	        AND (#dt.reset = FALSE) // when force jobs are enabled we by-pass the totalizer
+	        AND (#statValid = TRUE)
+	    THEN
+	        
+	        #statTotalDec := #statTotalDec + #statPresetDec;
+	        IF #statTotalDec >= #statExp THEN
+	            #statTotalInt := #statTotalInt + 1;
+	            #statTotalDec := #statTotalDec - #statExp;
+	            
+	        END_IF;
+	        
+	        #statTotalInt := #statTotalInt + #statPresetInt;
+	        
+	    END_IF;
+	    
+	    // Edge logic
+	    #statPulseOld := #tempPulse;
+	    
+	END_REGION TOTALIZER
+	
+	REGION OUTPUTS
+	    // Synth total value
+	    #statTotal := DINT_TO_LREAL(#statTotalInt) + (DINT_TO_LREAL(#statTotalDec) / #statExp);
+	    
+	    // Write static value to output
+	    #dt.output := #statTotal;
+	    
+	END_REGION OUTPUTS
+END_FUNCTION_BLOCK
+

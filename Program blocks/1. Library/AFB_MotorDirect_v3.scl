@@ -1,0 +1,296 @@
+﻿FUNCTION_BLOCK "AFB_MotorDirect_v3"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      start { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // "Logic" in order to start
+      "fb" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Motor's running feedback (1=run, 0=stop)
+      mcb { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Motor circuit breaker (1=ok, 0=fault)
+      ctrl { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Control of motor (1=PLC, 0=Local)
+      block { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Condition that blocks motor operation
+      generalackn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // General acknowledgement
+      reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Option that resets the faults
+      mute { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Mute siren
+      autoset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Option that sets the motor to auto mode (Used for mass auto set)
+      manualset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Option that sets the motor to manual mode (Used for mass manual set)
+      p1s { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse that is generated every 1 s (Count up)
+      p100ms { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse that is generated every 100 ms (Count up)
+      blink { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Blink that is used for the graphics (Frequency of CPU)
+   END_VAR
+
+   VAR_OUTPUT 
+      run { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Command to start motor
+      vfb { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Virtual feedback (used everywhere instead of digital fb)
+   END_VAR
+
+   VAR_IN_OUT 
+      faults : "UDT_MTRFAULTS";   // External data (Primary alarm data - alarm & plc ackn)
+   END_VAR
+
+   VAR RETAIN
+      i : "UDT_MOTORDIRECT";   // Data type containing the motor's data
+   END_VAR
+
+   VAR_TEMP 
+      condSET : Bool;
+      condRESET : Bool;
+   END_VAR
+
+
+BEGIN
+	REGION STATUS  NW:2-3
+	    
+	    //Network2: STATUS: Virtual feedback
+	    
+	    #i.status.vfb := (#fb AND NOT #i.sim.fb) OR (#i.out.run AND #i.sim.fb);
+	    
+	    //Network3: STATUS: Virtual control
+	    
+	    #i.status.vctrl := #i.sim.ctrl OR (#ctrl AND NOT #i.sim.ctrl);
+	    
+	END_REGION
+	
+	REGION FAULT  NW:4-8
+	    
+	    //Network4: FAULT: Fail to run
+	    
+	    "AFC_AlarmAckn"(trigger := NOT #i.status.vfb AND #i.out.run AND #i.status.vctrl,
+	                    release := NOT #i.sim.fb,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_ftr,
+	                    alarm => #faults.ctrl.alarm_ftr,
+	                    siren => #faults.status.siren_ftr,
+	                    hmiackn := #faults.status.hmiackn_ftr,
+	                    Data := #i.faults.ftr);
+	    
+	    //Network5: FAULT: Fail to stop
+	    
+	    "AFC_AlarmAckn"(trigger := #i.status.vfb AND NOT #i.out.run AND #i.status.vctrl,
+	                    release := NOT #i.sim.fb,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_fts,
+	                    alarm => #faults.ctrl.alarm_fts,
+	                    siren => #faults.status.siren_fts,
+	                    hmiackn := #faults.status.hmiackn_fts,
+	                    Data := #i.faults.fts);
+	    
+	    //Network6: FAULT: Monor circuit breaker
+	    
+	    "AFC_AlarmAckn"(trigger := NOT #mcb,
+	                    release := NOT #i.sim.fb,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_mcb,
+	                    alarm => #faults.ctrl.alarm_mcb,
+	                    siren => #faults.status.siren_mcb,
+	                    hmiackn := #faults.status.hmiackn_mcb,
+	                    Data := #i.faults.mcb);
+	    
+	    //Network7: FAULT: Control
+	    
+	    "AFC_AlarmAckn"(trigger := NOT #i.status.vctrl AND #i.out.run,
+	                    release := NOT #i.sim.ctrl,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_ctrl,
+	                    alarm => #faults.ctrl.alarm_ctrl,
+	                    siren => #faults.status.siren_ctrl,
+	                    hmiackn := #faults.status.hmiackn_ctrl,
+	                    Data := #i.faults.ctrl);
+	    
+	    //Network8: FAULT: Interlock violation
+	    
+	    "AFC_AlarmAckn"(trigger := #start AND #block,
+	                    release := #i.status.ilstart,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_il,
+	                    alarm => #faults.ctrl.alarm_il,
+	                    siren => #faults.status.siren_il,
+	                    hmiackn := #faults.status.hmiackn_il,
+	                    Data := #i.faults.il);
+	    
+	END_REGION
+	
+	REGION STATUS  NW:9-10
+	    
+	    //Network9: STATUS: General Fault
+	    
+	    #i.status.fault := #i.faults.ftr.status.alarm OR #i.faults.fts.status.alarm OR #i.faults.mcb.status.alarm OR #i.faults.ctrl.status.alarm OR #i.faults.il.status.alarm;
+	    
+	    //Network10: STATUS: Start interlock
+	    
+	    #i.status.ilstart := NOT (#block OR #i.status.fault) AND #i.status.vctrl;
+	    
+	END_REGION
+	
+	REGION CONTROL  NW:11-13
+	    
+	    //Network11: CONTROL: Manual Set
+	    
+	    #condSET := #i.cmd.man OR #manualset;
+	    #condRESET := #i.cmd.auto OR #autoset;
+	    
+	    #i.ind.man := (#i.ind.man OR #condSET) AND NOT #condRESET;
+	    
+	    //Network12: CONTROL: Auto Set
+	    
+	    #i.ind.auto := NOT #i.ind.man;
+	    
+	    //Network13: CONTROL: Manual Run
+	    
+	    #condSET := #i.cmd.start AND #i.ind.man;
+	    #condRESET := #i.cmd.stop OR NOT (#i.ind.man AND #i.status.ilstart);
+	    
+	    #i.out.manrun := (#i.out.manrun OR #condSET) AND NOT #condRESET;
+	    
+	END_REGION
+	
+	REGION STATUS  NW:14-15
+	    
+	    //Network14: STATUS: Motor's icon
+	    
+	    #i.status.icon := 0;
+	    
+	    IF #i.status.vfb AND NOT #i.status.fault AND #i.status.vctrl
+	    THEN
+	        #i.status.icon := 1;
+	    ELSIF #i.status.vfb AND NOT #i.status.fault AND NOT #i.status.vctrl
+	    THEN
+	        #i.status.icon := 2;
+	    ELSIF #i.status.fault AND #blink
+	    THEN
+	        #i.status.icon := 3;
+	    END_IF;
+	    
+	    //Network15: STATUS:Start/Stop Buttons
+	    
+	    #i.ind.start := #i.out.manrun AND #i.ind.man;
+	    #i.ind.stop := NOT #i.out.manrun AND #i.ind.man;
+	    
+	END_REGION
+	
+	REGION OUTPUT  NW:16
+	    
+	    //Network16: OUTPUT: Start motor
+	    
+	     #condSET := #i.status.ilstart AND (#i.out.manrun OR (#start AND #i.ind.auto));
+	    #condRESET := NOT #i.status.ilstart;
+	    
+	    "AFC_DelayONOFF"(cmd := #condSET,
+	                     Pulse := #p100ms,
+	                     Reset := #condRESET,
+	                     on => #i.out.run,
+	                     Data := #i.delay);
+	    
+	END_REGION
+	
+	REGION MNT  NW:17-19
+	    
+	    //Network17: ARH: Working hours counter
+	    
+	    IF #i.status.vfb AND #p1s THEN
+	        #i.arh.seconds := #i.arh.seconds + 1;
+	    END_IF;
+	    
+	    #i.arh.hour := #i.arh.seconds >= 3600;
+	    
+	    IF #i.arh.hour THEN
+	        #i.arh.actual := #i.arh.actual + 1;
+	        #i.arh.seconds := 0;
+	    END_IF;
+	    
+	    IF #i.arh.resetarh THEN
+	        #i.arh.actual := #i.arh.lastmaint := 0;
+	    END_IF;
+	    
+	    #i.arh.difference := #i.arh.actual - #i.arh.lastmaint;
+	    
+	    //Network18: ARH: Maintenance required
+	    
+	    #condSET := #i.arh.difference >= #i.arh.checkafter;
+	    #condRESET := (#i.arh.completed AND #i.arh.maintenance) OR NOT #i.arh.enable;
+	    
+	    #i.arh.maintenance := (#i.arh.maintenance OR #condSET) AND NOT #condRESET;
+	    
+	    IF #i.arh.completed AND #i.arh.maintenance THEN
+	        #i.arh.lastmaint := #i.arh.actual;
+	    END_IF;
+	    
+	    //Network19: STATUS: Maintenance required
+	    
+	    #i.status.maint := #i.arh.maintenance;
+	    
+	END_REGION
+	
+	REGION OUTPUT  NW:20
+	    
+	    //Network20: Move UDT outputs to FC outputs
+	    
+	    #run := #i.out.run;
+	    #vfb := #i.status.vfb;
+	    
+	END_REGION
+	
+	REGION BUTTON  NW:21
+	    
+	    //Network21: EXTRA: Button treatment
+	    
+	    IF #i.ind.auto THEN
+	        #i.cmd.auto := FALSE;
+	    END_IF;
+	    
+	    IF #i.ind.man THEN
+	        #i.cmd.man := FALSE;
+	    END_IF;
+	    
+	    IF #i.ind.start OR #i.ind.auto OR NOT #i.status.ilstart THEN
+	        #i.cmd.start := FALSE;
+	    END_IF;
+	    
+	    IF #i.ind.stop OR #i.ind.auto THEN
+	        #i.cmd.stop := FALSE;
+	    END_IF;
+	    
+	    IF #i.faults.fpreset THEN
+	        #i.faults.fpreset := FALSE;
+	    END_IF;
+	    
+	    IF (#i.arh.seconds = 0) AND (#i.arh.actual = 0) THEN
+	        #i.arh.resetarh := FALSE;
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

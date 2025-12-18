@@ -1,0 +1,13 @@
+﻿FUNCTION "detectNE" : Bool
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      newValue : Bool;
+      oldValue : Bool;
+   END_VAR
+
+
+BEGIN
+	#detectNE := NOT #newValue AND #oldValue;
+END_FUNCTION
+

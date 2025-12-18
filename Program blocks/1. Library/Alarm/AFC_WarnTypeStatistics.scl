@@ -1,0 +1,74 @@
+﻿FUNCTION "AFC_WarnTypeStatistics" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      "TYPE" : Int;
+      M_TYPE : Int;
+   END_VAR
+
+   VAR_OUTPUT 
+      nAlarm : UDInt;
+      nAckn : UDInt;
+      nSiren : UDInt;
+   END_VAR
+
+   VAR_TEMP 
+      i : Int;
+      alarm : Word;
+      ackn : Word;
+      siren : Word;
+   END_VAR
+
+   VAR CONSTANT 
+      wDIFF : Int := 1;
+      wAIN : Int := 0;
+      wPLANT : Int := 2;
+   END_VAR
+
+
+BEGIN
+	#nAlarm := 0;
+	#nAckn := 0;
+	#nSiren := 0;
+	
+	FOR #i := 0 TO #M_TYPE DO
+	    
+	    CASE #TYPE OF
+	         #wAIN:
+	              
+	              "AFC_AlarmGatherStruct"(
+	                                ctrl := "WARNINGS".AIN[#i].ctrl,
+	                                status := "WARNINGS".AIN[#i].status,
+	                                _ctrl => #alarm,
+	                                _status => #ackn);
+	              
+	         #wDIFF:
+	            
+	             "AFC_AlarmGatherStruct"(
+	                              ctrl:="WARNINGS".DIFF[#i].ctrl,
+	                              status:="WARNINGS".DIFF[#i].status,
+	                              _ctrl=>#alarm,
+	                              _status=>#ackn);
+	            
+	       #wPLANT:
+	            
+	            "AFC_AlarmGatherArray"(
+	                              ctrl := "WARNINGS".Plant[#i].ctrl,
+	                              status := "WARNINGS".Plant[#i].status,
+	                              _ctrl => #alarm,
+	                              _status => #ackn);
+	            
+	        ELSE  // Statement section ELSE
+	            ;
+	    END_CASE;
+	    
+	    
+	    #nAlarm := #nAlarm + "countAlarms"(#alarm.%B0);
+	    #nAckn := #nAckn + "countAlarms"(#ackn.%B1);
+	    #nSiren := #nSiren + "countAlarms"(#ackn.%B0);
+	    
+	END_FOR;
+	
+	
+END_FUNCTION
+

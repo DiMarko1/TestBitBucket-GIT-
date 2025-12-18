@@ -1,0 +1,42 @@
+﻿FUNCTION_BLOCK "pALARMS"
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : CH
+FAMILY : Aktina
+NAME : Faults
+VERSION : 0.1
+   VAR 
+      "75sf1" { S7_SetPoint := 'False'} : "AFB_AlarmAckn";
+   END_VAR
+
+
+BEGIN
+	REGION FAULT
+	    
+	    //Safety fault: Emergency button 75SF1
+	    // #"75sf1"(trigger := NOT "di_Emergency_btn",
+	    //          release := TRUE,
+	    //          ctrlpoint := TRUE,
+	    //          enackn := TRUE,
+	    //          ensiren := TRUE,
+	    //          p100ms := "p100ms",
+	    //          generalackn := "ResetFaults",
+	    //          reset := "ResetFaults",
+	    //          mute :="MuteHorn",
+	    //          delay := 0.5,
+	    //          plcackn => "FAULTS".Plant[0].ctrl[8],
+	    //          alarm => "FAULTS".Plant[0].ctrl[0],
+	    //          siren => "FAULTS".Plant[0].status[0],
+	    //          hmiackn := "FAULTS".Plant[0].status[8]);
+	    
+	
+	   
+	
+	
+	END_REGION
+	
+	REGION WARNING
+	    
+	     
+	END_REGION
+END_FUNCTION_BLOCK
+

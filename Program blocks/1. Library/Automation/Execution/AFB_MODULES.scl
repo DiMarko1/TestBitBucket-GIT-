@@ -1,0 +1,91 @@
+﻿FUNCTION_BLOCK "AFB_MODULES"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR 
+      ADIN { S7_SetPoint := 'False'} : Array[0.."M_ADIN"] of "AFB_ADIN_v3";
+      AIN { S7_SetPoint := 'False'} : Array[0.."M_AIN"] of "AFB_AIN_v3";
+      DIFF { S7_SetPoint := 'False'} : Array[0.."M_DIFF"] of "AFB_DIFF_v3";
+      DIN { S7_SetPoint := 'False'} : Array[0.."M_DIN"] of "AFB_DIN_v3";
+      MTR { S7_SetPoint := 'False'} : Array[0.."M_MTR"] of "AFB_MotorPID_v3";
+      MTRLIN { S7_SetPoint := 'False'} : Array[0.."M_MTRLIN"] of "AFB_MotorLinearCtrl_v3";
+      MTRDIR { S7_SetPoint := 'False'} : Array[0.."M_MTRDIR"] of "AFB_MotorDirect_v3";
+      VLV { S7_SetPoint := 'False'} : Array[0.."M_VLV"] of "AFB_Valve_v3";
+      CVLV { S7_SetPoint := 'False'} : Array[0.."M_CVLV"] of "AFB_ControlValve_v3";
+   END_VAR
+
+   VAR_TEMP 
+      i : Int;
+   END_VAR
+
+
+BEGIN
+	FOR #i := 0 TO "M_ADIN" DO
+	    
+	    "Proc_ADIN"(i := #i,
+	                module := #ADIN[#i]);
+	    
+	END_FOR;
+	
+	FOR #i := 0 TO "M_AIN" DO
+	    
+	    "Proc_AIN"(i := #i,
+	               module := #AIN[#i]);
+	    
+	END_FOR;
+	
+	FOR #i := 0 TO "M_DIFF" DO
+	    
+	    
+	    "Proc_DIFF"(i := #i,
+	                module := #DIFF[#i]);
+	    
+	    
+	END_FOR;
+	
+	FOR #i := 0 TO "M_DIN" DO
+	    
+	    "Proc_DIN"(i := #i,
+	               module := #DIN[#i]);
+	    
+	END_FOR;
+	
+	FOR #i := 0 TO "M_MTR" DO
+	    
+	    
+	    "Proc_MTR"(i := #i,
+	               module := #MTR[#i]);
+	    
+	    
+	END_FOR;
+	
+	FOR #i := 0 TO "M_MTRDIR" DO
+	    
+	    
+	    "Proc_MTRDIR"(i := #i,
+	                  module := #MTRDIR[#i]);
+	    
+	    
+	END_FOR;
+	
+	FOR #i := 0 TO "M_MTRLIN" DO
+	    
+	    "Proc_MTRLIN"(i := #i,
+	                  module := #MTRLIN[#i]);
+	    
+	               END_FOR;
+	
+	FOR #i := 0 TO "M_VLV" DO
+	    
+	    "Proc_VLV"(i := #i,
+	               module := #VLV[#i]);
+	    
+	END_FOR;
+	
+	FOR #i := 0 TO "M_CVLV" DO
+	    
+	    "Proc_CVLV"(i := #i,
+	                module := #CVLV[#i]);
+	    
+	END_FOR;
+END_FUNCTION_BLOCK
+

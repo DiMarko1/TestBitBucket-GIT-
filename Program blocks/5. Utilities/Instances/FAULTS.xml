@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Blocks.GlobalDB ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="Static">
+    <Member Name="ADIN" Datatype="Array[0..&quot;MAX_ADIN&quot;] of &quot;UDT_DINFAULTS&quot;">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">ADIN = 1 alarm/instance, 24 x 8 (each type contains 8 instances) = 192 alarms, offset = 0</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="AIN" Datatype="Array[0..&quot;MAX_AIN&quot;] of &quot;UDT_AINFAULTS&quot;">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">AIN = 2 alarms/instance, 200 x 2 = 400 alarms, offset = 192</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="DIFF" Datatype="Array[0..&quot;MAX_DIFF&quot;] of &quot;UDT_AINFAULTS&quot;">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">DIFF = 2 alarms/instance, 32 x 2 = 64 alarms, offset = 592</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="DIN" Datatype="Array[0..&quot;MAX_DIN&quot;] of &quot;UDT_DINFAULTS&quot;">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">DIN = 1 alarm/instance, 24 x 8 (each type contains 8 instances) = 192 alarms, offset = 656</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="MTR" Datatype="Array[0..&quot;MAX_MTR&quot;] of &quot;UDT_MTRFAULTS&quot;">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">MTR = 6 alarms/instance, 200 x 6 = 1200 alarms, offset = 848</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="MTRLIN" Datatype="Array[0..&quot;MAX_MTRLIN&quot;] of &quot;UDT_MTRFAULTS&quot;">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">MTRLIN = 6 alarms/instance, 80 x 6 = 480 alarms, offset = 2048</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="MTRDIR" Datatype="Array[0..&quot;MAX_MTRDIR&quot;] of &quot;UDT_MTRFAULTS&quot;">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">MTRDIR = 6 alarms/instance, 200 x 6 = 1200 alarms, offset = 2528</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="VLV" Datatype="Array[0..&quot;MAX_VLV&quot;] of &quot;UDT_VALVEFAULTS&quot;">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">VLV = 4 alarms/instance, 200 x 6 = 1200 alarms, offset = 3728</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="Plant" Datatype="Array[0..&quot;MAX_PLANT&quot;] of &quot;UDT_DINFAULTS&quot;">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">Plant = 1 alarm/instance, 24 x 8 (each type contains 8 instances) = 192 alarms, offset = 4928</MultiLanguageText>
+      </Comment>
+    </Member>
+  </Section>
+</Sections></Interface>
+      <MemoryLayout>Standard</MemoryLayout>
+      <Name>FAULTS</Name>
+      <Namespace />
+      <Number>14</Number>
+      <ProgrammingLanguage>DB</ProgrammingLanguage>
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="3" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Blocks.GlobalDB>
+</Document>

@@ -1,0 +1,519 @@
+﻿FUNCTION_BLOCK "AFB_Sequencer"
+TITLE = AFB_Sequencer1
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : CH
+FAMILY : Aktina
+NAME : SEQUENCER
+VERSION : 0.1
+//AFB_Sequencer1
+   VAR_INPUT 
+      p1s : Bool;   //  TRUE: 1 pulse every 1s
+      startAllow : Bool;   //  TRUE: The sequencer start condition is valid and it is allowed to start
+      startCond : Bool;   //  TRUE: The options controller released the condition for the booting of the sequencer
+      endCond : Bool;   //  TRUE: The state machine should end its execution immediately
+      runcond : Bool;   //  TRUE: The option is running
+      resetTimeOut : Bool;   //  TRUE: The time out timer should reset
+      offset : Int;   //  Offset number for active step
+      holdReset : DInt;   //  Preset time after the end of the sequencer to block restarting
+      stepSP : Array[0..#ctMAX_STEP] of "dtStepSP";   //  Array containing the steps setpoints
+      stepCond : Array[0..#ctMAX_STEP] of "dtStepCond";   //  Array containing all the steps conditions
+   END_VAR
+
+   VAR_OUTPUT 
+      blocked : Bool;   //  TRUE: The sequencer is blocked from starting
+      timeout : Bool;   //  TRUE: The sequencer execution has timed out
+      busy : Bool;   //  TRUE: The sequencer has started and it is ongoing
+      run : Bool;   //  TRUE: The sequencer operation is running
+      prompt : Bool;   //  TRUE: The sequencer prompts for an operator confirmation
+      error : Bool;   //  TRUE: An error was generated during execution
+      noFault : Bool;   //  TRUE: The active step is running without errors
+      done : Bool;   //  TRUE: The sequencer execution has finished
+      terminate : Bool;   //  TRUE: The sequencer execution was terminated either by force of error
+      fin : Bool;   //  TRUE: The sequencer end timer has just expired (stays high for 1 cycle)
+      stepOn : Array[0..#ctMAX_STEP] of Bool;   //  TRUE: The step has just been loaded
+      stepAct : Array[0..#ctMAX_STEP] of Bool;   //  TRUE: The step is active
+      stepRun : Array[0..#ctMAX_STEP] of Bool;   //  TRUE: The step is running (used mostly as condition for activations)
+      stepOff : Array[0..#ctMAX_STEP] of Bool;   //  TRUE: The step has just ended
+      status : Word;   //  Status of the function block
+      stepNr : Int;   //  Number of active step = offset + statFBState
+      stateNr : Int;   //  Number of active state = statFBState
+   END_VAR
+
+   VAR RETAIN
+      statStartReqOld { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      statFBState { ExternalWritable := 'False'} : Int := #ctFB_STATE_NO_PROCESSING;   //  State in the state machine of the FB
+      statStatus { ExternalWritable := 'False'} : Word := #ctSTATUS_NO_CALL;   //  Static value for output 'status'
+   END_VAR
+   VAR DB_SPECIFIC
+      statBusy { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Static value for output 'busy'
+      statRun { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Static value for output 'run'
+      statPrompt { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Static value for output 'prompt'
+      statError { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Static value for output 'error'
+      statNoFault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Static value for output 'noFault'
+      statDone { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Static value for output 'done'
+      statTerminate { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Static value for output 'terminate'
+      statFin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  Static value for output 'fin'
+      statExclude { S7_SetPoint := 'True'} : Bool;   //  Static value that allows the supervisor to stop the forced step updating from the current step
+      statForce { S7_SetPoint := 'True'} : Bool;   //  Static value that allows the supervisor to force a new step
+      statLastStep : Int;   //  Static value for the last step number
+      statForceStep { S7_SetPoint := 'True'} : Int;   //  Static value for the new forced step value
+   END_VAR
+   VAR 
+      statStepOn : Array[0..#ctMAX_STEP] of Bool;   //  Static memory area for output array "stepOn"
+      statStepAct : Array[0..#ctMAX_STEP] of Bool;   //  Static memory area for output array "stepOn"
+      statStepRun : Array[0..#ctMAX_STEP] of Bool;   //  Static memory area for output array "stepRun"
+      statStepOff : Array[0..#ctMAX_STEP] of Bool;   //  Static memory area for output array "stepOff"
+   END_VAR
+   VAR RETAIN
+      instTimeReset {InstructionName := 'IEC_TIMER'; LibVersion := '1.0'; S7_SetPoint := 'False'} : IEC_TIMER;   //  Instance for the timer that resets everything and prevents restarting
+   END_VAR
+   VAR 
+      instTimeStep { S7_SetPoint := 'False'} : "AFB_TimeCount";   //  Instance for the step timer
+      instTimeOut { S7_SetPoint := 'False'} : "AFB_TimeCount";   //  Instance for the timeout timer
+   END_VAR
+
+   VAR_TEMP 
+      tempStartAllow : Bool;   //  Temporary status bit for the "startAllow" input
+      tempStartCond : Bool;   //  Temporary status bit for the "startCond" input
+      tempEndCond : Bool;   //  Temporary status bit for the "endCond" input
+      tempRun : Bool;   //  Temporary status bit for the "run" input
+      tempChangeStep : Bool;   //  Temporary status bit set whenever a change of step is required
+      tempForceStep : Bool;   //  Temporary status bit set whenever a forcing of step is required
+      tempStepSP : "dtStepSP";   //  Temporary area for the active step setpoints
+      tempStepCond : "dtStepCond";   //  Temporary area for the active step conditions
+      n : Int;   //  Temporary LOOP operand
+   END_VAR
+
+   VAR CONSTANT 
+      ctMAX_STEP : Int := 31;   //  Max: Number steps
+      ctMAX_HOPS : Int := 31;   //  Max: Hops allowed for the while loop
+      ctFB_STATE_NO_PROCESSING : Int := 0;   //  FB state: No processing
+      ctFB_STATE_PROCESSING_1 : Int := 1;   //  FB state: Processing 1
+      ctSTATUS_NO_CALL : Word := 16#7000;   //  Status: No job being currently processed
+      ctSTATUS_FIRST_CALL : Word := 16#7001;   //  Status: First call after incoming new job (rising edge 'execute')
+      ctSTATUS_SUBSEQUENT_CALL : Word := 16#7002;   //  Status: Subsequent call during active processing without further details
+      ctSTATUS_EXECUTION_TERMINATED : Word := 16#7008;   //  Status: Execution finished without errors
+      ctSTATUS_EXECUTION_FINISHED : Word := 16#700F;   //  Status: Execution finished without errors
+      ctERR_UNDEFINED_STATE : Word := 16#8000;   //  Error: Due to an undefined state in state machine
+      ctERR_IN_BLOCK_OPERATION : Word := 16#8001;   //  Error: Wrong operation of the function block
+      ctERR_PARAMETRIZATION : Word := 16#8002;   //  Error: During parameterization
+   END_VAR
+
+
+BEGIN
+	REGION BLOCK HEADER
+	     //===============================================================================
+	     // CH / (c)Copyright (2021)
+	     //-------------------------------------------------------------------------------
+	     // Title:             (Sequencer control block type 1)
+	     // Comment/Function:  (Control step execution of a sequencer by providing only key conditions and setpoints)
+	     // Library/Family:    (Aktina/Tools/Sequencer)
+	     // Author:            (CH)
+	     // Tested with:       (V16)
+	     // Engineering:       (TIA Step7 Professional V16)
+	     // Restrictions:      ()
+	     // Requirements:      (S7-15xx/12xx CPUs)
+	     // Notes:             (See block notes)
+	     //-------------------------------------------------------------------------------
+	     // Change log table:
+	     // Version  | Date       | Dev in charge          | Changes
+	     //----------|------------|------------------------|------------------------------
+	     // 01.00.00 | 2021-08-22 | (CH)                   | First released version
+	     // 01.00.01 | 2022-01-13 | (CH)                   | "No timeout" allowed - busy hangon corrected
+	     // 01.00.02 | 2023-05-18 | (CH)                   | "RESET(instResetTimer) - removed to allow timer to run
+	     //===============================================================================
+	END_REGION
+	
+	REGION BLOCK NOTES
+	     //===============================================================================
+	     // 1: The number of steps participating is configured by the #ctMAX_STEP
+	     //-------------------------------------------------------------------------------
+	     // 2: The idle or exit step is always 0 so the number of steps remaining
+	     // for the rest of the program is steps = #ctMAX_Step - 1
+	     //-------------------------------------------------------------------------------
+	     // 3: The block supports zero cycles for step change even if there are 
+	     // multiple hops.
+	     //-------------------------------------------------------------------------------
+	     // 4: The maximum allowed number of hops is the ctMAX_HOPS to avoid an endless
+	     // loop. After that alarm is generated.
+	     //===============================================================================
+	END_REGION
+	
+	REGION GENERIC PRE-INSTRUCTIONS
+	     //  Init temporary area
+	     #tempStartAllow := (#startAllow = TRUE) AND (#instTimeReset.Q = FALSE) AND (#statDone = FALSE) AND (#statTerminate = FALSE);
+	     #tempStartCond := #startCond;
+	     #tempEndCond := #endCond;
+	     #tempRun := #runcond;
+	     #tempChangeStep := FALSE;
+	     #tempForceStep := FALSE;
+	     #tempStepSP := #stepSP[0];
+	     #tempStepCond := #stepCond[0];
+	     #n := 0;
+	     
+	     // Reset static step memory with every cycle to avoid forced states loaded by a programmer
+	     FOR #n := 0 TO #ctMAX_STEP DO
+	          #statStepOn[#n] := FALSE;
+	          #statStepAct[#n] := FALSE;
+	          #statStepRun[#n] := FALSE;
+	          #statStepOff[#n] := FALSE;
+	     END_FOR;
+	     
+	END_REGION GENERIC PRE-INSTRUCTIONS
+	
+	REGION TRIGGERING
+	     IF (#tempStartCond = TRUE) AND (#statStartReqOld = FALSE) // Check if FB is triggered
+	          AND (#tempStartAllow = TRUE)
+	          AND (#tempEndCond = FALSE)
+	          AND (#instTimeReset.Q = FALSE)
+	          AND (#stepSP[0].next > 0)
+	          AND (#statBusy = FALSE)
+	          AND (#statDone = FALSE)
+	     THEN // First call; initialize FB stat 
+	          // TODO: Initialize functionality: reset of variables, diagnostics, etc.
+	          #statBusy := TRUE;
+	          #statStepOff[0] := TRUE;
+	          #statStepAct[0] := FALSE;
+	          #statStatus := #ctSTATUS_FIRST_CALL;
+	          
+	          // TODO: Initialize functionality: start state machine.
+	          #statFBState := #stepSP[0].next;
+	          
+	          // TODO: Initialize functionality: call subsidiary FBs with FALSE
+	          "AFC_RESET_TimeCount"(#instTimeStep);
+	          "AFC_RESET_TimeCount"(#instTimeOut);
+	          RESET_TIMER(#instTimeReset);
+	          
+	     ELSIF (#statStatus = #ctSTATUS_FIRST_CALL) THEN
+	          #statStatus := #ctSTATUS_SUBSEQUENT_CALL;
+	     END_IF;
+	     
+	     // Edge detection 'startReq' input
+	     #statStartReqOld := #tempStartCond;
+	END_REGION TRIGGERING
+	
+	REGION END WHEN IDLE
+	     IF (#statStatus = #ctSTATUS_NO_CALL) THEN // Nothing to do -> End here to reduce "system load"
+	          // Static memory
+	          #statDone := FALSE;
+	          #statTerminate := FALSE;
+	          #statBusy := FALSE;
+	          #statRun := FALSE;
+	          #statNoFault := TRUE;
+	          #statError := FALSE;
+	          #statPrompt := FALSE;
+	          #statExclude := FALSE;
+	          #statForce := FALSE;
+	          #statFin := FALSE;
+	          #statLastStep := #statFBState;
+	          #statForceStep := #statFBState;
+	          #statStepAct[0] := TRUE;
+	          
+	          // if ENO mechanism is not used / not wanted replace the following line by --> ENO := TRUE;
+	          // ENO := NOT #statError;
+	          ENO := TRUE;
+	          
+	          // Outputs
+	          #blocked := (#startAllow = FALSE);
+	          #timeout := FALSE;
+	          #done := #statDone;
+	          #terminate := #statTerminate;
+	          #busy := #statBusy;
+	          #run := #statRun;
+	          #noFault := #statNoFault;
+	          #error := #statError;
+	          #prompt := #statPrompt;
+	          #fin := #statFin;
+	          #stepOn := #statStepOn;
+	          #stepAct := #statStepAct;
+	          #stepRun := #statStepRun;
+	          #stepOff := #statStepOff;
+	          #status := #statStatus;
+	          #stepNr := #statFBState + #offset;
+	          #stateNr := #statFBState;
+	          
+	          RETURN;
+	          
+	     END_IF;
+	     
+	END_REGION END WHEN IDLE
+	
+	REGION STATE_MACHINE
+	     
+	     CASE #statFBState OF // State machine of FB
+	               
+	          #ctFB_STATE_NO_PROCESSING:
+	               REGION no processing
+	                    // No processing active (Note: this state must always be present and left empty)
+	                    ;
+	               END_REGION no processing
+	               
+	          #ctFB_STATE_PROCESSING_1..#ctMAX_STEP: // Processing active
+	               REGION processing n-step
+	                    // Processing active n=#statFBState case is processed
+	                    // The goal is to run the step with the minimum system load
+	                    // If a step change is required it is done in the same programming cycle 
+	                    
+	                    // The step conditions are evaluated in a WHILE loop and the loop
+	                    // is interrupted whenever a valid step is loaded or the maximum 
+	                    // allowed hops are counted
+	                    
+	                    #n := 0;
+	                    WHILE (#n <= #ctMAX_HOPS) DO
+	                         // Increase operand by 1 with each loop
+	                         #n := #n + 1;
+	                         
+	                         // Scan the state of the machine for the end condition
+	                         IF (#statFBState = 0)
+	                         THEN
+	                              #statStatus := #ctSTATUS_EXECUTION_FINISHED;
+	                              
+	                         ELSIF (#tempEndCond = TRUE) OR (#statBusy = FALSE)
+	                         THEN
+	                              #statStatus := #ctSTATUS_EXECUTION_TERMINATED;
+	                              
+	                         ELSIF (#statFBState < 0) OR (#statFBState > #ctMAX_STEP)
+	                              OR (#ctMAX_STEP < 2)
+	                         THEN
+	                              #statStatus := #ctERR_IN_BLOCK_OPERATION;
+	                              
+	                         ELSIF (#n >= #ctMAX_HOPS)
+	                         THEN
+	                              #statStatus := #ctERR_PARAMETRIZATION;
+	                              
+	                         END_IF;
+	                         
+	                         // Exit loop if a status of aborting is detected
+	                         IF (#statStatus >= #ctSTATUS_EXECUTION_TERMINATED)
+	                         THEN
+	                              
+	                              EXIT; // exit loop immediately
+	                              
+	                         END_IF;
+	                         
+	                         // Move active step data to temporary area for the eaase of use
+	                         #tempStepSP := #stepSP[#statFBState];
+	                         #tempStepCond := #stepCond[#statFBState];
+	                         
+	                         // Load correct arguments to the timers
+	                         #instTimeStep.preset := #tempStepSP.timeStep;
+	                         #instTimeOut.preset := #tempStepSP.timeOut;
+	                         
+	                         // Condition to change a step
+	                         #tempChangeStep := (#tempRun = TRUE) AND (
+	                         (#tempStepSP.type = 0) AND (#instTimeStep.done = TRUE) OR
+	                         (#tempStepSP.type = 1) AND (#tempStepCond.proceed = TRUE) OR
+	                         (#tempStepSP.type = 2) AND (#instTimeStep.done = TRUE) AND (#tempStepCond.proceed = TRUE)
+	                         );
+	                         
+	                         // Condition to force a new step
+	                         #tempForceStep := (#statExclude = TRUE)
+	                         AND (#statForceStep <= #ctMAX_STEP) AND (#statForceStep > 0)
+	                         AND (#statForce = TRUE);
+	                         
+	                         // Scan the state of the machine for a change step condition
+	                         IF (#tempChangeStep = TRUE)
+	                         THEN
+	                              #statStepAct[#statFBState] := FALSE;
+	                              #statStepOff[#statFBState] := TRUE;
+	                              #statNoFault := TRUE;
+	                              #statPrompt := FALSE;
+	                              #statLastStep := #statFBState;
+	                              #statFBState := #tempStepSP.next;
+	                              #statStepOn[#statFBState] := TRUE;
+	                              
+	                              "AFC_RESET_TimeCount"(#instTimeStep);
+	                              "AFC_RESET_TimeCount"(#instTimeOut);
+	                              
+	                              CONTINUE; // Rerun loop to check the new step's conditions in case an immediate change is requested.
+	                              
+	                         ELSIF (#tempForceStep = TRUE)
+	                         THEN
+	                              #statStepAct[#statFBState] := FALSE;
+	                              #statStepRun[#statFBState] := FALSE;
+	                              #statStepOff[#statFBState] := TRUE;
+	                              #statNoFault := TRUE;
+	                              #statPrompt := FALSE;
+	                              #statLastStep := #statFBState;
+	                              #statFBState := #statForceStep;
+	                              #statStepOn[#statFBState] := TRUE;
+	                              
+	                              #statExclude := FALSE;
+	                              #statForce := FALSE;
+	                              
+	                              "AFC_RESET_TimeCount"(#instTimeStep);
+	                              "AFC_RESET_TimeCount"(#instTimeOut);
+	                              
+	                              CONTINUE; // Rerun loop to check the new step's conditions in case an immediate change is requested.
+	                              
+	                         END_IF;
+	                         
+	                         // If the loop reaches this point then the step=#statFBState is active
+	                         EXIT;
+	                         
+	                    END_WHILE;
+	                    
+	                    #statStepAct[#statFBState] := TRUE;
+	                    #statStepRun[#statFBState] := #tempRun;
+	                    
+	                    #instTimeStep.trigger := #tempStepCond.count;
+	                    #instTimeStep.reset := #tempStepCond.reset;
+	                    
+	                    #instTimeOut.trigger := TRUE;
+	                    
+	                    IF (#statExclude = FALSE) THEN
+	                         #statForceStep := #statFBState;
+	                    END_IF;
+	                    
+	                    #statNoFault := #tempStepCond.nofault;
+	                    #statPrompt := #tempStepCond.prompt;
+	                    #statRun := #tempRun;
+	                    
+	               END_REGION processing n-step      
+	               
+	          ELSE // Undefined state in state machine reached
+	               REGION undefined state
+	                    #statStatus := #ctERR_UNDEFINED_STATE;
+	                    
+	               END_REGION undefined state
+	     END_CASE;
+	END_REGION STATE_MACHINE
+	
+	REGION OUTPUTS
+	     // Write outputs
+	     IF (#statStatus = #ctSTATUS_EXECUTION_FINISHED) AND (#statDone = FALSE) THEN // Execution finished without errors
+	          REGION execution finished
+	               #statDone := TRUE;
+	               #statTerminate := FALSE;
+	               #statBusy := FALSE;
+	               #statError := FALSE;
+	               #statExclude := FALSE;
+	               #statForce := FALSE;
+	               #statNoFault := TRUE;
+	               #statPrompt := FALSE;
+	               #statStepOn[0] := TRUE;
+	               #statStepAct[0] := TRUE;
+	               
+	               // reset step timers
+	               "AFC_RESET_TimeCount"(#instTimeStep);
+	               "AFC_RESET_TimeCount"(#instTimeOut);
+	               
+	               // reset state machine
+	               #statFBState := #ctFB_STATE_NO_PROCESSING;
+	               
+	          END_REGION execution finished
+	          
+	     ELSIF (#statStatus = #ctSTATUS_EXECUTION_TERMINATED) AND (#statTerminate = FALSE) THEN // Execution forced to stop
+	          REGION execution terminated
+	               #statDone := FALSE;
+	               #statTerminate := TRUE;
+	               #statBusy := FALSE;
+	               #statError := FALSE;
+	               #statExclude := FALSE;
+	               #statForce := FALSE;
+	               #statNoFault := TRUE;
+	               #statPrompt := FALSE;
+	               #statStepOn[0] := TRUE;
+	               #statStepAct[0] := TRUE;
+	               
+	               // reset step timers
+	               "AFC_RESET_TimeCount"(#instTimeStep);
+	               "AFC_RESET_TimeCount"(#instTimeOut);
+	               
+	               // reset state machine
+	               #statFBState := #ctFB_STATE_NO_PROCESSING;
+	               
+	          END_REGION execution terminated
+	          
+	     ELSIF (#statStatus.%X15 = TRUE) AND (#statError = FALSE) THEN // Error occurred (#statStatus is 16#8000 to 16#FFFF)
+	          REGION error occured
+	               #statDone := FALSE;
+	               #statTerminate := TRUE;
+	               #statBusy := FALSE;
+	               #statError := TRUE;
+	               #statExclude := FALSE;
+	               #statForce := FALSE;
+	               #statNoFault := TRUE;
+	               #statPrompt := FALSE;
+	               #statStepOn[0] := TRUE;
+	               #statStepAct[0] := TRUE;
+	               
+	               // reset step timers
+	               "AFC_RESET_TimeCount"(#instTimeStep);
+	               "AFC_RESET_TimeCount"(#instTimeOut);
+	               
+	               // reset state machine
+	               #statFBState := #ctFB_STATE_NO_PROCESSING;
+	               
+	          END_REGION error occured
+	          
+	     ELSIF (#instTimeReset.Q = FALSE) AND ((#statDone = TRUE) OR (#statTerminate = TRUE)) THEN // Reset outputs //    AND (#statBusy = FALSE)  // CH: 20230518 - Changed to allow total reset when timer is running
+	          REGION execute total reset
+	               #statDone := FALSE;
+	               #statTerminate := FALSE;
+	               #statBusy := FALSE;
+	               #statError := FALSE;
+	               #statExclude := FALSE;
+	               #statForce := FALSE;
+	               #statFin := TRUE;
+	               // reset status
+	               #statStatus := #ctSTATUS_NO_CALL;
+	               
+	               // reset state machine
+	               #statFBState := #ctFB_STATE_NO_PROCESSING;
+	               #statLastStep := #statFBState;
+	               
+	               // TODO: Reset application specific outputs
+	               "AFC_RESET_TimeCount"(#instTimeStep);
+	               "AFC_RESET_TimeCount"(#instTimeOut);
+	               RESET_TIMER(#instTimeReset);
+	               
+	          END_REGION execute total reset
+	     END_IF;
+	     
+	     REGION timers
+	          // Call instances
+	          #instTimeStep(p1s := #p1s);
+	          
+	          #instTimeOut(p1s := #p1s,
+	                       reset := #resetTimeOut);
+	          
+	          // **Added to allow "no timeout" setup
+	          IF (#instTimeOut.statPresetSec = 0)
+	          THEN
+	               "AFC_RESET_TimeCount"(#instTimeOut);
+	          END_IF;
+	          
+	          #instTimeReset.TOF(IN := (#statBusy = TRUE),
+	                             PT := DINT_TO_TIME(#holdReset));
+	          
+	     END_REGION timers
+	     
+	     REGION write static values to outputs
+	          // if ENO mechanism is not used / not wanted replace the following line by --> ENO := TRUE;
+	          // ENO := NOT #statError;
+	          ENO := TRUE;
+	          // TODO: Write application specific static values to outputs
+	          #blocked := (#instTimeReset.Q = TRUE) AND (#statBusy = FALSE);
+	          #timeout := (#instTimeOut.done = TRUE) AND (#statBusy = TRUE);
+	          #done := #statDone;
+	          #terminate := #statTerminate;
+	          #busy := #statBusy;
+	          #run := #statRun;
+	          #noFault := #statNoFault;
+	          #error := #statError;
+	          #prompt := #statPrompt;
+	          #fin := #statFin;
+	          #stepOn := #statStepOn;
+	          #stepAct := #statStepAct;
+	          #stepRun := #statStepRun;
+	          #stepOff := #statStepOff;
+	          #status := #statStatus;
+	          #stepNr := #statFBState + #offset;
+	          #stateNr := #statFBState;
+	          
+	     END_REGION write static values TO outputs
+	     
+	END_REGION OUTPUTS
+END_FUNCTION_BLOCK
+

@@ -1,0 +1,32 @@
+﻿FUNCTION "AFC_Word_To_Array" : Void
+TITLE = AFC_Word_To_Array
+{ S7_Optimized_Access := 'FALSE' }
+AUTHOR : CH
+FAMILY : Aktina
+NAME : Global
+VERSION : 0.1
+//AFC_Word_To_Array
+   VAR_INPUT 
+      w : Word;
+   END_VAR
+
+   VAR_OUTPUT 
+      s : Array[0..15] of Bool;
+   END_VAR
+
+   VAR_TEMP 
+      tw : Word;
+      ts AT tw : Array[0..15] of Bool;
+   END_VAR
+
+
+BEGIN
+	#tw := #w;
+	
+	#s := #ts;
+	
+	#tw := 16#0;
+	
+	RETURN;
+END_FUNCTION
+

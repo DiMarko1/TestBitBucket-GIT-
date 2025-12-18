@@ -1,0 +1,48 @@
+﻿FUNCTION "Proc_AIN" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      i : Int;
+   END_VAR
+
+   VAR_IN_OUT 
+      module : "AFB_AIN_v3";
+   END_VAR
+
+
+BEGIN
+	IF "DB_System".modulesGroup.AIN AND "MODULES_CTRL".AIN[#i].status THEN
+	    
+	    // PI: INPUT
+	    
+	    // IMPLICIT INPUT
+	    
+	    #module.reset := "ResetFaults";
+	    #module.p1s := "p1s";
+	    #module.p100ms := "p100ms";
+	    #module.generalackn := "generalAckn";
+	    #module.mute := "MuteHorn";
+	    #module.t_sys := "DB_System".datetime.current;
+	    
+	    // EXPLICIT INPUT
+	    
+	    "explicitInput_AIN"(i:=#i,
+	                        module:=#module);
+	    
+	    // Run Module
+	    
+	    #module(faults:="FAULTS".AIN[#i],
+	            warnings:="WARNINGS".AIN[#i]);
+	    
+	    // EXPLICIT OUTPUT
+	    
+	    "explicitOutput_AIN"(i:=#i,
+	                         module:=#module);
+	    
+	ELSE
+	    
+	    #module.output := 0;
+	    
+	END_IF;
+END_FUNCTION
+

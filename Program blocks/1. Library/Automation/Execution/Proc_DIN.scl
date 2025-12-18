@@ -1,0 +1,66 @@
+﻿FUNCTION "Proc_DIN" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      i : Int;
+   END_VAR
+
+   VAR_IN_OUT 
+      module : "AFB_DIN_v3";
+   END_VAR
+
+   VAR_TEMP 
+      indexLEFT : Int;   //  Index for the primary array of module faults
+      indexRIGHT : Int;   //  Index for the secondary array of module faults
+   END_VAR
+
+
+BEGIN
+	IF "DB_System".modulesGroup.DIN AND "MODULES_CTRL".DIN[#i].status THEN
+	    
+	    // PI: INPUT
+	    
+	    
+	    // IMPLICIT INPUT
+	    
+	    #module.p1s := "p1s";
+	    #module.p100ms := "p100ms";
+	    #module.generalackn := "generalAckn";
+	    #module.reset := "ResetFaults";
+	    #module.mute := "MuteHorn";
+	    
+	    // EXPLICIT INPUT
+	    
+	    "explicitInput_DIN"(i:=#i,
+	                        module:=#module);
+	
+	    // Run Module
+	    
+	    #indexLEFT := #i/8; // decide the type array member
+	    
+	    IF (#indexLEFT > "MAX_DIN") OR (#indexLEFT < 0) THEN // "IF" has a protective AND NOT corrective role
+	         #indexLEFT := "MAX_DIN";
+	    END_IF;
+	    #indexRIGHT := #i - #indexLEFT * 8; // decide the alarm member inside the previous index
+	    
+	    IF (#indexRIGHT > 7) THEN // "IF" has a protective and not corrective role
+	         #indexRIGHT := 7;
+	    END_IF;
+	    
+	    #module(alarm_din:="FAULTS".DIN[#indexLEFT].ctrl[#indexRIGHT],
+	            plcackn_din:="FAULTS".DIN[#indexLEFT+ 8].ctrl[#indexRIGHT+8],
+	            siren_din:="FAULTS".DIN[#indexLEFT].status[#indexRIGHT],
+	            hmiackn_din:="FAULTS".DIN[#indexLEFT +8].status[#indexRIGHT +8]);
+	     
+	    // EXPLICIT OUTPUT
+	    
+	    "explicitOutput_DIN"(i:=#i,
+	                         module:=#module);
+	    
+	ELSE
+	    
+	    #module.Switch := FALSE;
+	    
+	END_IF;
+END_FUNCTION
+

@@ -1,0 +1,68 @@
+﻿FUNCTION_BLOCK "C_MTRLIN"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      enable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      index : Int;
+      cmd : Bool;
+      fup : Bool;
+   END_VAR
+
+   VAR 
+      status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_STATUS_MTRLIN";
+   END_VAR
+
+   VAR_TEMP 
+      module : "UDT_MOTORLINEAR";
+      resetStatus : "UDT_STATUS_MTRLIN";
+   END_VAR
+
+
+BEGIN
+	IF #enable THEN
+	    
+	    #status.enabled := TRUE;
+	    
+	    #module := "MOD".MTRLIN[#index].i;
+	    
+	    REGION STATUS
+	        
+	        #status.running := #module.status.vfb;
+	        #status.inFault := #module.status.fault;
+	        
+	        #status.reference := #module.out."ref";
+	        
+	        #status.justStarted := "detectPE"(newValue := #status.running, oldValue := #status.old.running);
+	        #status.justStopped := "detectNE"(newValue := #status.running, oldValue := #status.old.running);
+	        #status.justHadFault := "detectPE"(newValue := #status.inFault, oldValue := #status.old.fault);
+	        #status.justLostFault := "detectNE"(newValue := #status.inFault, oldValue := #status.old.fault);
+	        
+	        #status.old.running := #status.running;
+	        #status.old.fault := #status.inFault;
+	        
+	    END_REGION
+	    
+	    REGION COMMAND
+	        
+	         "MOD".MTRLIN[#index].start := #cmd;
+	        "MOD".MTRLIN[#index].followup := #fup;
+	        
+	    END_REGION
+	    
+	    REGION SIM
+	        
+	        "MOD".MTRLIN[#index].i.sim.fb := "MODULES_CTRL".MTRLIN[#index].sim.simFb;
+	        "MOD".MTRLIN[#index].i.sim.ctrl := "MODULES_CTRL".MTRLIN[#index].sim.simCtrl;
+	        
+	    END_REGION
+	    
+	ELSE
+	    
+	    #status := #resetStatus;
+	    
+	    "MOD".MTRLIN[#index].start := #cmd;
+	    "MOD".MTRLIN[#index].followup := #fup;
+	    
+	END_IF;
+END_FUNCTION_BLOCK
+

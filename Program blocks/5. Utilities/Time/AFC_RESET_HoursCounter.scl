@@ -1,0 +1,29 @@
+﻿FUNCTION "AFC_RESET_HoursCounter" : Void
+TITLE = AFC_RESET_HoursCounter
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : CH
+FAMILY : Aktina
+NAME : 'TIME'
+VERSION : 0.1
+//AFC_RESET_HoursCounter
+   VAR_IN_OUT 
+      hoursCounter : "AFB_HoursCounter";   //  Hours counter to be reset
+   END_VAR
+
+
+BEGIN
+	// Reset timer totally
+	
+	#hoursCounter.trigger := FALSE;
+	#hoursCounter.reset := TRUE;
+	
+	#hoursCounter.preset.sec := 0;
+	#hoursCounter.preset.min := 0;
+	#hoursCounter.preset.hour := 0;
+	
+	#hoursCounter();
+	
+	#hoursCounter.reset := FALSE;
+	
+END_FUNCTION
+

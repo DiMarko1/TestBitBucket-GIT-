@@ -1,0 +1,57 @@
+﻿FUNCTION "Proc_VLV" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      i : Int;
+   END_VAR
+
+   VAR_IN_OUT 
+      module : "AFB_Valve_v3";
+   END_VAR
+
+
+BEGIN
+	IF "DB_System".modulesGroup.VLV AND "MODULES_CTRL".VLV[#i].status THEN
+	    
+	    // PI: INPUT
+	    
+	    
+	    // IMPLICIT INPUT
+	
+	    #module.generalackn := "generalAckn";
+	    #module."reset" := "ResetFaults";
+	    #module.mute := "MuteHorn";
+	    #module."autoset" := "AutoSET";
+	    #module."manualset" := "ManualSET";
+	    #module.p1s := "p1s";
+	    #module.p100ms := "p100ms";
+	    #module.blink := "blink";
+	    
+	    // EXPLICIT INPUT
+	    
+	    "explicitInput_VLV"(i:=#i,
+	                        module:=#module);
+	    
+	    
+	    // Run Module
+	    
+	    #module(faults:="FAULTS".VLV[#i]);
+	    
+	    // PI: OUTPUT
+	    
+	    
+	    // EXPLICIT OUTPUT
+	    
+	    "explicitOutput_VLV"(i:=#i,
+	                         module:=#module);
+	    
+	ELSE
+	    
+	    #module.main:=FALSE;
+	    #module.upper := FALSE;
+	    #module.lower := FALSE;
+	    
+	    
+	END_IF;
+END_FUNCTION
+

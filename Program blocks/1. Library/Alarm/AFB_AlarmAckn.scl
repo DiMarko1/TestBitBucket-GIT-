@@ -1,0 +1,100 @@
+﻿FUNCTION_BLOCK "AFB_AlarmAckn"
+TITLE = AFB_AlarmAckn
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : CH
+FAMILY : Aktina
+NAME : Global
+VERSION : 0.1
+//AFB_AlarmAckn
+   VAR_INPUT 
+      trigger { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Alarm trigger
+      release { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Release alarm
+      ctrlpoint { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Control point (0=HMI, 1=PLC)
+      enackn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Enable acknowledgement (0=disable, 1=enable)
+      ensiren { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Enable siren for this alarm
+      p100ms { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 100ms pulse
+      generalackn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // General acknowledgement
+      reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset
+      mute { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Mute siren
+      delay { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Delay on (s)
+   END_VAR
+
+   VAR_OUTPUT 
+      plcackn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // PLC acknowledgement bit
+      alarm { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Activation
+      siren { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Siren
+   END_VAR
+
+   VAR_IN_OUT 
+      hmiackn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // HMI acknowledgement bit
+   END_VAR
+
+   VAR RETAIN
+      i : "UDT_ALARMACKN";   // Data processed in local memory
+   END_VAR
+
+
+BEGIN
+	
+	(*Calculate setpoint*)
+	IF #ctrlpoint THEN
+	    #i.setup."en" := #release;
+	    #i.don.sp := REAL_TO_UINT(#delay * 10.0);
+	ELSE
+	    #i.don.sp := REAL_TO_UINT(#i.setup.spon * 10.0);
+	END_IF;
+	
+	(*PLC acknowledgement*)
+	IF #enackn AND #i.status.alarm THEN
+	    IF (*#hmiackn OR*) #generalackn THEN
+	        #i.status.plcackn := TRUE;
+	    END_IF;
+	ELSE
+	    (*#hmiackn :=*) #i.status.plcackn := FALSE;
+	END_IF;
+	
+	
+	(*Reset counter*)
+	IF NOT #trigger OR #i.status.alarm OR NOT #release OR NOT #i.setup."en" THEN
+	    #i.don.actual := 0;
+	END_IF;
+	
+	(*Alarming function*)
+	IF #release AND #i.setup."en" THEN
+	    
+	    (*Count-up*)
+	    #i.don.countup := #trigger AND #i.don.actual < #i.don.sp;
+	    
+	    IF #i.don.countup AND #p100ms AND NOT #i.don.end THEN
+	        #i.don.actual := #i.don.actual + 1;
+	    END_IF;
+	    
+	    (*Alarm & Siren generation*)
+	    IF #trigger AND #i.don.actual >= #i.don.sp THEN
+	        IF #ensiren AND NOT #i.status.alarm THEN
+	            #i.status.siren := TRUE;
+	        END_IF;
+	        #i.status.alarm := TRUE;
+	    END_IF;
+	    
+	    (*Siren reset*)
+	    IF NOT #ensiren OR #mute OR #i.status.plcackn OR NOT #i.status.alarm THEN
+	        #i.status.siren := FALSE;
+	    END_IF;
+	    
+	    (*Alarm reset*)
+	    IF NOT #trigger AND #i.status.alarm AND ((#enackn AND #i.status.plcackn) OR NOT #enackn) AND #reset THEN
+	        #i.status.alarm := FALSE;
+	    END_IF;
+	    
+	ELSE
+	    #i.status.alarm := #i.status.siren := #i.don.countup := (*#hmiackn :=*) #i.status.plcackn := FALSE;
+	END_IF;
+	
+	#plcackn := #i.status.plcackn;
+	#alarm := #i.status.alarm;
+	#siren := #i.status.siren;
+	
+	RETURN;
+END_FUNCTION_BLOCK
+

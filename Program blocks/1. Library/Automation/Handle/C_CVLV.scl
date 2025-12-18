@@ -1,0 +1,58 @@
+﻿FUNCTION_BLOCK "C_CVLV"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      enable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      index : Int;
+      cmd : Bool;
+      fup : Bool;
+   END_VAR
+
+   VAR 
+      status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_STATUS_CVLV";
+   END_VAR
+
+   VAR_TEMP 
+      module : "UDT_CONTROLVALVE";
+      resetStatus : "UDT_STATUS_CVLV";
+   END_VAR
+
+
+BEGIN
+	IF #enable THEN
+	    
+	    #status.enabled := TRUE;
+	    
+	    #module := "MOD".CVLV[#index].i;
+	    
+	    REGION STATUS
+	        
+	         #status.running := #module.out.vfbact;
+	        
+	        #status.reference := #module.out."ref";
+	        
+	        #status.justStarted := "detectPE"(newValue := #status.running, oldValue := #status.old.running);
+	        #status.justStopped := "detectNE"(newValue := #status.running, oldValue := #status.old.running);
+	        
+	        #status.old.running := #status.running;
+	        
+	    END_REGION
+	    
+	    REGION COMMAND
+	        
+	         "MOD".CVLV[#index].control := #cmd;
+	         "MOD".CVLV[#index].followup := #fup;
+	         
+	        
+	    END_REGION
+	    
+	ELSE
+	    
+	    #status := #resetStatus;
+	    
+	    "MOD".CVLV[#index].control := #cmd;
+	    "MOD".CVLV[#index].followup := #fup;
+	    
+	END_IF;
+END_FUNCTION_BLOCK
+

@@ -1,0 +1,159 @@
+﻿FUNCTION_BLOCK "AFB_AlarmF"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_OUTPUT 
+      faults : Struct
+         pending : UDInt := 0;
+         unackn : UDInt := 0;
+      END_STRUCT;
+      warnings : Struct
+         pending { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt := 0;   // False
+         unackn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UDInt := 0;   // False
+      END_STRUCT;
+      fault : Bool := false;
+      warning : Bool := false;
+      siren : Bool := false;
+      icon : Byte := 16#0;
+   END_VAR
+
+   VAR 
+      M_TYPE_FAULT : Array[0..#M_TYPES_FAULT] of Int := ["M_ADIN", "M_AIN", "M_DIFF", "M_DIN", "M_MTR", "M_MTRLIN", "M_MTRDIR", "M_VLV", "M_PLANT"];
+      M_TYPE_WARNING : Array[0..#M_TYPES_WARNING] of Int := ["M_AIN", "M_DIFF", "M_PLANT"];
+      nFault : Struct
+         Alarm : Array[0..#M_TYPES_FAULT] of UDInt;
+         Ackn : Array[0..#M_TYPES_FAULT] of UDInt;
+         Siren : Array[0..#M_TYPES_FAULT] of UDInt;
+      END_STRUCT;
+      nWarning : Struct
+         Alarm : Array[0..#M_TYPES_WARNING] of UDInt;
+         Ackn : Array[0..#M_TYPES_WARNING] of UDInt;
+         Siren : Array[0..#M_TYPES_WARNING] of UDInt;
+      END_STRUCT;
+   END_VAR
+
+   VAR_TEMP 
+      i : Int;
+      totalFault : Struct
+         alarm : UDInt;
+         ackn : UDInt;
+         siren : UDInt;
+      END_STRUCT;
+      totalWarning : Struct
+         alarm : UDInt;
+         ackn : UDInt;
+         siren : UDInt;
+      END_STRUCT;
+   END_VAR
+
+   VAR CONSTANT 
+      tADIN : Int := 0;
+      tAIN : Int := 1;
+      tDIFF : Int := 2;
+      tDIN : Int := 3;
+      tMTR : Int := 4;
+      tMTRLIN : Int := 5;
+      tMTRDIR : Int := 6;
+      tVLV : Int := 7;
+      tPLANT : Int := 8;
+      wAIN : Int := 0;
+      wDIFF : Int := 1;
+      wPLANT : Int := 2;
+      M_TYPES_FAULT : Int := 8;
+      M_TYPES_WARNING : Int := 2;
+   END_VAR
+
+
+BEGIN
+	REGION Custom faults
+	     "iPALARMS"();
+	     
+	     END_REGION Custom faults
+	
+	REGION FAULTS
+	    
+	    #totalFault.alarm := 0;
+	    #totalFault.ackn := 0;
+	    #totalFault.siren := 0;
+	    
+	    // Set number of instances for the statistics calculations
+	    #M_TYPE_FAULT[#tADIN] := "M_ADIN";
+	    #M_TYPE_FAULT[#tAIN] := "M_AIN";
+	    #M_TYPE_FAULT[#tDIFF] := "M_DIFF";
+	    #M_TYPE_FAULT[#tDIN] := "M_DIN";
+	    #M_TYPE_FAULT[#tMTR] := "M_MTR";
+	    #M_TYPE_FAULT[#tMTRLIN] := "M_MTRLIN";
+	    #M_TYPE_FAULT[#tMTRDIR] := "M_MTRDIR";
+	    #M_TYPE_FAULT[#tVLV] := "M_VLV";
+	    #M_TYPE_FAULT[#tPLANT] := "M_PLANT";
+	    
+	    #M_TYPE_WARNING[#wAIN] := "M_AIN";
+	    #M_TYPE_WARNING[#wDIFF] := "M_DIFF";
+	    #M_TYPE_WARNING[#wPLANT] := "M_PLANT";
+	    
+	    
+	    
+	    FOR #i := #tADIN TO #tPLANT DO
+	        
+	        "AFC_AlarmTypeStatistics"(TYPE := #i,
+	                                  M_TYPE := #M_TYPE_FAULT[#i],
+	                                  nAlarm => #nFault.Alarm[#i],
+	                                  nAckn => #nFault.Ackn[#i],
+	                                  nSiren => #nFault.Siren[#i]);
+	        
+	        #totalFault.alarm := #totalFault.alarm + #nFault.Alarm[#i];
+	        #totalFault.ackn := #totalFault.ackn + #nFault.Ackn[#i];
+	        #totalFault.siren := #totalFault.siren + #nFault.Siren[#i];
+	        
+	    END_FOR;
+	    
+	END_REGION
+	
+	REGION WARNINGS
+	    
+	    #totalWarning.alarm := 0;
+	    #totalWarning.ackn := 0;
+	    #totalWarning.siren := 0;
+	    
+	    FOR #i := #wAIN TO #wPLANT DO
+	        
+	        "AFC_WarnTypeStatistics"(TYPE := #i,
+	       M_TYPE := #M_TYPE_WARNING[#i],
+	       nAlarm => #nWarning.Alarm[#i],
+	       nAckn => #nWarning.Ackn[#i],
+	       nSiren => #nWarning.Siren[#i]);
+	        
+	        #totalWarning.alarm := #totalWarning.alarm + #nWarning.Alarm[#i];
+	        #totalWarning.ackn := #totalWarning.ackn + #nWarning.Ackn[#i];
+	        #totalWarning.siren := #totalWarning.siren + #nWarning.Siren[#i];
+	        
+	    END_FOR;
+	    
+	    
+	END_REGION
+	
+	(*Siren*)
+	
+	#faults.pending := #totalFault.alarm;
+	#faults.unackn := #totalFault.alarm + #totalFault.ackn;
+	
+	#warnings.pending := #totalWarning.alarm;
+	#warnings.unackn := #totalWarning.alarm + #totalWarning.ackn;
+	
+	#fault := #totalFault.alarm <> 0;
+	#warning := #totalWarning.alarm <> 0;
+	#siren := #totalFault.siren <> 0 OR #totalWarning.siren <> 0;
+	
+	(*Icon*)
+	IF (#totalFault.alarm <> 0)
+	THEN
+	    #icon := 4;
+	    
+	ELSIF (#totalWarning.alarm <> 0)
+	THEN
+	    #icon := 2;
+	    
+	ELSE
+	    #icon := 1;
+	END_IF;
+END_FUNCTION_BLOCK
+

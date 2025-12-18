@@ -1,0 +1,23 @@
+﻿FUNCTION "explicitInput_MTRDIR" : Void
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      i : Int;
+   END_VAR
+
+   VAR_IN_OUT 
+      module : "AFB_MotorDirect_v3";
+   END_VAR
+
+
+BEGIN
+	CASE #i OF
+	        
+	    -1:
+	        ;
+	        
+	    ELSE
+	        ;
+	END_CASE;
+END_FUNCTION
+

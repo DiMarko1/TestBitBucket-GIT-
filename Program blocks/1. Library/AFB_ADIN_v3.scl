@@ -1,0 +1,149 @@
+﻿FUNCTION_BLOCK "AFB_ADIN_v3"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      input { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Analog sensor value to be compared
+      monitorfault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Release fault monitoring
+      p1s { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse edge for 1Hz
+      p100ms { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse edge for 10Hz
+      generalackn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // General acknowledgement
+      reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset Fault
+      mute { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Mute siren
+      Unit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : WString;   // Analog sensor's unit
+   END_VAR
+
+   VAR_OUTPUT 
+      Switch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Switch after time cross check
+   END_VAR
+
+   VAR_IN_OUT 
+      alarm_adin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      plcackn_adin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      siren_adin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      hmiackn_adin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_VAR
+
+   VAR RETAIN
+      i : "UDT_ADIN";   // UDT containing scale process data
+   END_VAR
+
+   VAR_TEMP 
+      condSET : Bool;
+      condRESET : Bool;
+   END_VAR
+
+
+BEGIN
+	REGION SIM NW:2-3
+	    
+	    // Network2: SIM: Simulation
+	
+	    #i.sim.simulated := (#i.sim.simulated OR #i.sim.cmdon) AND NOT #i.sim.cmdoff;
+	    
+	    // Network3: SIM: Force
+	    
+	    #condSET := #i.sim.cmdforce;
+	    #condRESET := #i.sim.cmdunforce OR (NOT #i.sim.simulated);
+	    
+	    #i.sim.forced := (#i.sim.forced OR #condSET) AND NOT #condRESET;
+	    
+	END_REGION
+	
+	REGION STATUS: NW:4-6
+	    
+	    // Network4: STATUS: Raw input
+	    
+	    #i.status.rawinput := #input;
+	    
+	    // Network5: STATUS: Processed input
+	    
+	    #i.status.processed := ((#i.status.rawinput > #i.setup.reference) AND (#i.setup.comparison = 0)) OR
+	                            ((#i.status.rawinput >= #i.setup.reference) AND (#i.setup.comparison = 1)) OR
+	                            ((#i.status.rawinput < #i.setup.reference) AND (#i.setup.comparison = 2)) OR
+	                            ((#i.status.rawinput <= #i.setup.reference) AND (#i.setup.comparison = 3));
+	
+	    // Network6: STATUS: Alarm monitor     
+	    
+	    #i.status.alarm_monitor := #monitorfault AND #i.faults.adin.setup."en";
+	    
+	END_REGION
+	
+	REGION ADIN: NW 7-9
+	    
+	    // Network7: ADIN: Reset actual timers
+	    
+	    IF #i.sim.simulated OR (#i.status.processed AND #i.status.switch_active) THEN
+	        
+	        #i."time".on_act := #i."time".off_act := 0;
+	        
+	    END_IF;
+	    
+	    IF #i.sim.simulated OR (NOT #i.status.processed AND NOT #i.status.switch_active) THEN
+	        
+	        #i."time".on_act := #i."time".off_act := 0;
+	        
+	    END_IF;
+	    
+	    
+	    // Network8: ADIN: Counter
+	    
+	    IF (#i.status.processed AND NOT #i.status.switch_active) AND #p1s THEN
+	        
+	        #i."time".on_act := #i."time".on_act + 1;
+	        
+	    END_IF;
+	    
+	    IF (NOT #i.status.processed AND #i.status.switch_active) AND #p1s THEN
+	        
+	        #i."time".off_act := #i."time".off_act + 1;
+	        
+	    END_IF;
+	    
+	    // Network9: ADIN: Set switch active
+	    
+	    #condSET := #i.sim.forced OR (#i.status.processed AND NOT #i.sim.simulated AND (#i."time".on_act >= #i."time".on_set));
+	    #condRESET := (NOT #i.sim.forced AND #i.sim.simulated) OR (NOT #i.status.processed AND NOT #i.sim.simulated AND (#i."time".off_act >= #i."time".off_set));
+	    
+	    #i.status.switch_active := (#i.status.switch_active OR #condSET) AND NOT #condRESET;
+	    
+	END_REGION
+	
+	REGION FAULT: NW 10
+	    
+	    // Network10: FAULT: Switch activated
+	    
+	    "AFC_AlarmAckn"(trigger:=(NOT #i.setup.triggerversion AND NOT #i.status.switch_active) OR ((#i.setup.triggerversion AND #i.status.switch_active)),
+	                    release:=#monitorfault,
+	                    ctrlpoint:=FALSE,
+	                    enackn:=TRUE,
+	                    ensiren:=TRUE,
+	                    p100ms:=#p100ms,
+	                    generalackn:=#generalackn OR #i.faults.fpreset,
+	                    reset:=#reset OR #i.faults.fpreset,
+	                    mute:=#mute,
+	                    delay:=0.0,
+	                    plcackn=>#plcackn_adin,
+	                    alarm=>#alarm_adin,
+	                    siren=>#siren_adin,
+	                    hmiackn:=#hmiackn_adin,
+	                    Data:=#i.faults.adin);
+	    
+	END_REGION
+	
+	REGION GEN: NW 11-12
+	    
+	    // Network11: FAULT: Switch activated
+	    
+	    #Switch := #i.status.switch_active;
+	    
+	    // Network12: FAULT: Switch activated - @CH: This network is provided to treat the phenomenon of non-reset buttons
+	    
+	    IF #i.faults.fpreset THEN
+	        
+	        #i.faults.fpreset := FALSE;
+	        
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

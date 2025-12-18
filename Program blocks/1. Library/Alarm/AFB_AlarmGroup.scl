@@ -1,0 +1,165 @@
+﻿FUNCTION_BLOCK "AFB_AlarmGroup"
+TITLE = AFB_AlarmGroup
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : CH
+FAMILY : Aktina
+NAME : Global
+VERSION : 0.1
+//AFB_AlarmGroup
+   VAR_INPUT 
+      req : Bool;   // Request
+      "db" : DB_ANY;   // DB with the alarm data
+   END_VAR
+
+   VAR_OUTPUT 
+      ret_val : Int;   // Return value (256=wrong DB structure, <>256=attr_db ret_val)
+   END_VAR
+
+   VAR_IN_OUT 
+      alarm : Bool;   // New alarm
+      siren : Bool;   // Siren
+      pending : UDInt;   // Pending alarms
+      unackn : UDInt;   // Uacknowledged alarms
+   END_VAR
+
+   VAR 
+      attr : Struct   // DB attributes
+         ret_val : Int;
+         length : UDInt;
+         attrib : Byte;
+      END_STRUCT;
+      cond : Struct   // Conditions
+         siren : Bool;   // There is a siren bit enabled
+         alarm : Bool;   // There is a pending alarm
+         unackn : Bool;   // There is an unacknowledged alarm
+      END_STRUCT;
+      peek : Struct   // Peek data
+         offset : DInt;   // Memory offset for peek instruction starting byte
+         memory : Byte;   // Memory returned by peek instruction
+      END_STRUCT;
+      alarms : Struct   // Alarms number
+         pending : UDInt;   // Pending alarms
+         siren : UDInt;   // Siren requestsnumber
+         ackn : UDInt;   // Acknowledged alarms
+         unackn : UDInt;   // Uacknowledged alarms
+      END_STRUCT;
+      temp : Struct   // Temporary memory examined
+         pending : Byte;   // Pending alarm memory
+         ackn : Byte;   // Acknowledged alarm memory
+         siren : Byte;   // Siren memory
+      END_STRUCT;
+      groups : UInt;   // Groups number
+      n : UInt;   // Operand n
+      x : Byte;   // Operand x
+   END_VAR
+
+
+BEGIN
+	
+	REGION Group monitoring
+	    
+	IF #req THEN
+	    
+	    #attr.ret_val := ATTR_DB(REQ := #req, DB_NUMBER := #db, DB_LENGTH => #attr.length, ATTRIB => #attr.attrib);
+	    
+	    #groups := UDINT_TO_UINT(#attr.length / 4);
+	    
+	    IF (UDINT_TO_UINT(#attr.length) - (#groups * 4)) <> 0 OR #attr.length = 0 THEN
+	        #ret_val := 256;
+	        #alarm := #siren := FALSE;
+	        #alarms.unackn := #alarms.pending := #alarms.ackn := 0;
+	        
+	        RETURN;
+	        
+	    ELSE
+	        #ret_val := #attr.ret_val;
+	    END_IF;
+	    
+	(*Check for pending and unacknowledged alarms.
+	If there is no pending alarm then we do not continue and check for siren.
+	The software is optimised to check for all in the min possible execution time.*)
+	    
+	(*Alarms*)
+	    #n := 0;
+	    #alarms.pending := #alarms.ackn := #alarms.siren := 0;
+	    WHILE #n < #groups DO
+	        
+	        #peek.offset := 0 + #n * 4;
+	        
+	        #peek.memory := PEEK(area := 16#84, dbNumber := #db, byteOffset := #peek.offset);
+	        
+	        IF #peek.memory <> 0 THEN // We are checking only if byte is full
+	            
+	            #temp.pending := #peek.memory;
+	            
+	            #peek.offset := 1 + #n * 4; // Check also for acknowledged alarms
+	            
+	            #peek.memory := PEEK(area := 16#84, dbNumber := #db, byteOffset := #peek.offset);
+	            
+	            #temp.ackn := #peek.memory;
+	            
+	            #peek.offset := 2 + #n * 4; // Check also for acknowledged alarms
+	            
+	            #peek.memory := PEEK(area := 16#84, dbNumber := #db, byteOffset := #peek.offset);
+	            
+	            #temp.siren := #peek.memory;
+	            
+	            WHILE #temp.pending <> 0 DO
+	                IF (#temp.pending AND 16#1) <> 0 THEN // Check for pending alarms
+	                    #alarms.pending := #alarms.pending + 1;
+	                    IF (#temp.ackn AND 16#1) <> 0 THEN // Check for acknowledged alarms
+	                        #alarms.ackn := #alarms.ackn + 1;
+	                    END_IF;
+	                    IF (#temp.siren AND 16#1) <> 0 THEN // Check for siren requests
+	                        #alarms.siren := #alarms.siren + 1;
+	                    END_IF;
+	                END_IF;
+	                #temp.pending := SHR_BYTE(IN := #temp.pending, N := 1);
+	                #temp.ackn := SHR_BYTE(IN := #temp.ackn, N := 1);
+	                #temp.siren := SHR_BYTE(IN := #temp.siren, N := 1);
+	            END_WHILE;
+	            
+	        ELSE
+	            
+	            #temp.pending := #temp.ackn := #temp.siren := #peek.memory := 0;
+	            
+	        END_IF;
+	        #n := #n + 1;
+	    END_WHILE;
+	    
+	    #alarms.unackn := #alarms.pending - #alarms.ackn; // Unacknowledged alarms number
+	    
+	    #cond.alarm := #alarms.pending <> 0; // Condition for pending alarms
+	    #cond.siren := #alarms.siren <> 0; // Condition for siren
+	    
+	ELSE
+	   
+	    #ret_val := 0;
+	    #cond.alarm := #cond.siren := FALSE;
+	    #alarms.unackn := #alarms.pending := #alarms.ackn := 0;
+	    
+	END_IF;
+	
+	END_REGION Group monitoring
+	
+	REGION Output
+	    // We alter the output only if it is necessary
+	    
+	    IF (#cond.alarm = TRUE) THEN
+	        #alarm := TRUE;
+	    END_IF;
+	    
+	    IF (#cond.siren = TRUE) THEN
+	        #siren := TRUE;
+	    END_IF;
+	    
+	    #pending := #alarms.pending;
+	    #unackn := #alarms.unackn;
+	    
+	    END_REGION Output
+	
+	
+	RETURN;
+	    
+END_FUNCTION_BLOCK
+

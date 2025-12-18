@@ -1,0 +1,13 @@
+﻿FUNCTION "detectPE" : Bool
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      newValue : Bool;
+      oldValue : Bool;
+   END_VAR
+
+
+BEGIN
+	#detectPE := #newValue AND NOT #oldValue;
+END_FUNCTION
+

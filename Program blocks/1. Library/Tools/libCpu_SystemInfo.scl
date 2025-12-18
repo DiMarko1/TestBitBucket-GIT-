@@ -1,0 +1,97 @@
+﻿FUNCTION_BLOCK "libCpu_SystemInfo"
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : CH
+FAMILY : Aktina
+NAME : Lib_System
+VERSION : 1.1
+   VAR_INPUT 
+      init { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE: First cycle
+      clockByte { ExternalWritable := 'False'} : Byte;   //  Clock byte provided by the CPU
+   END_VAR
+
+   VAR_OUTPUT 
+      timeByte { ExternalWritable := 'False'} : Byte;   //  Time byte resulting as PPD of 'clockByte'
+      localTime {InstructionName := 'DTL'; LibVersion := '1.0'} : DTL;   //  Local CPU time
+   END_VAR
+
+   VAR RETAIN
+      statLocalTime {InstructionName := 'DTL'; LibVersion := '1.0'; ExternalWritable := 'False'} : DTL;
+      statClockByteOld { ExternalWritable := 'False'} : Byte;
+   END_VAR
+   VAR 
+      statTimeByte { ExternalWritable := 'False'} : Byte;
+   END_VAR
+
+   VAR_TEMP 
+      tempClockByte : Byte;
+      tempLocalTimeRet : Int;
+   END_VAR
+
+
+BEGIN
+	//===============================================================================
+	// Aktinaplan Ltd / (c)Copyright (2023)
+	//-------------------------------------------------------------------------------
+	// Title:            (System bits)
+	// Comment/Function: ()
+	// Library/Family:   (Aktina/Tools/System)
+	// Author:           (CH)
+	// Tested with:      (S7 1513)
+	// Engineering:      TIA Portal (v15.1)
+	// Restrictions:     ()
+	// Requirements:     (S7)
+	//-------------------------------------------------------------------------------
+	// Change log table:
+	// Version  | Date       | Expert in charge       | Changes applied
+	//----------|------------|------------------------|------------------------------
+	// 01.00.00 | 2023-01-08 | CH                     | First released version
+	// 01.00.01 | 2023-07-28 | CH                     | Added local time
+	//===============================================================================
+	
+	REGION Initialization
+	     
+	     IF (#init = TRUE) THEN
+	          // initialize memory
+	          #statClockByteOld := 16#0;
+	          #statTimeByte := 16#0;
+	          #timeByte := 16#0;
+	          // and exit block
+	          RETURN;
+	     END_IF;
+	     
+	END_REGION
+	
+	REGION Local PI
+	     // Create process image
+	     #tempClockByte := #clockByte;
+	     
+	END_REGION
+	
+	REGION Instructions
+	     // System instruction (write under here the instructions)
+	     
+	     REGION Cpu time byte    
+	          // Create time byte based on ppd detection of Cpu frequency bits
+	          #statTimeByte := #tempClockByte XOR #statClockByteOld AND #tempClockByte;
+	          // Edge detection
+	          #statClockByteOld := #clockByte;
+	          
+	     END_REGION
+	     
+	     REGION CPU local time
+	          // Read local time instruction
+	          #tempLocalTimeRet := RD_LOC_T(#statLocalTime);
+	          
+	     END_REGION
+	     
+	END_REGION
+	
+	REGION Outputs
+	     // Block outputs
+	     #timeByte := #statTimeByte;
+	     #localTime := #statLocalTime;
+	     
+	END_REGION ;
+	
+END_FUNCTION_BLOCK
+

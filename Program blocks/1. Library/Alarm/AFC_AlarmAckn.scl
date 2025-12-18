@@ -1,0 +1,121 @@
+﻿FUNCTION "AFC_AlarmAckn" : Void
+TITLE = AFC_ALARMACKN
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : CH
+FAMILY : Aktina
+NAME : Global
+VERSION : 0.1
+//AFC_ALARMACKN
+   VAR_INPUT 
+      trigger : Bool;   // Alarm trigger
+      release : Bool;   // Release alarm
+      ctrlpoint : Bool;   // Control point (0=HMI, 1=PLC)
+      enackn : Bool;   // Enable acknowledgement (0=disable, 1=enable)
+      ensiren : Bool;   // Enable siren for this alarm
+      p100ms : Bool;   // 100ms pulse
+      generalackn : Bool;   // General acknowledgement
+      reset : Bool;   // Reset
+      mute : Bool;   // Mute siren
+      delay : Real;   // Delay on (s)
+   END_VAR
+
+   VAR_OUTPUT 
+      plcackn : Bool;   // PLC acknowledgement bit
+      alarm : Bool;   // Activation
+      siren : Bool;   // Siren
+   END_VAR
+
+   VAR_IN_OUT 
+      hmiackn : Bool;   // HMI acknowledgement bit
+      Data : Variant;   // UDT symbolic address in global DB
+   END_VAR
+
+   VAR_TEMP 
+      i : "UDT_ALARMACKN";   // Data processed in local memory
+   END_VAR
+
+
+BEGIN
+	
+	(*Import data*)
+	VariantGet(SRC:=#Data,
+	           DST=>#i);
+	
+	(*Calculate setpoint*)
+	IF #ctrlpoint THEN
+	    #i.setup."en" := #release;
+	    #i.don.sp := REAL_TO_UINT(#delay * 10.0);
+	ELSE
+	    #i.don.sp := REAL_TO_UINT(#i.setup.spon * 10.0);
+	END_IF;
+	
+	// (*PLC acknowledgement*)
+	// IF #enackn AND #i.status.alarm THEN
+	//     IF #hmiackn OR #generalackn THEN
+	//         #i.status.plcackn := TRUE;
+	//     END_IF;
+	// ELSE
+	//     #hmiackn := #i.status.plcackn := FALSE;
+	// END_IF;
+	
+	
+	(*PLC acknowledgement*)
+	IF #enackn AND #i.status.alarm THEN
+	    IF (*#hmiackn OR*)#generalackn THEN
+	        #i.status.plcackn := TRUE;
+	    END_IF;
+	ELSE
+	    (*#hmiackn :=*) 
+	    #i.status.plcackn := FALSE;
+	END_IF;
+	
+	(*Reset counter*)
+	IF NOT #trigger OR #i.status.alarm OR NOT #release OR NOT #i.setup."en" OR (#i.setup.spon = 0.0)  THEN
+	    #i.don.actual := 0;
+	END_IF;
+	
+	(*Alarming function*)
+	IF #release AND #i.setup."en" AND (#i.setup.spon > 0.0)  THEN
+	    
+	    (*Count-up*)
+	    #i.don.countup := #trigger AND #i.don.actual < #i.don.sp;
+	    
+	    IF #i.don.countup AND #p100ms AND NOT #i.don.end THEN
+	        #i.don.actual := #i.don.actual + 1;
+	    END_IF;
+	    
+	    (*Alarm & Siren generation*)
+	    IF #trigger AND #i.don.actual >= #i.don.sp THEN
+	        
+	        IF #ensiren AND NOT #i.status.alarm THEN
+	            #i.status.siren := TRUE;
+	        END_IF;
+	        #i.status.alarm := TRUE;
+	    END_IF;
+	    
+	    (*Siren reset*)
+	    IF NOT #ensiren OR #mute OR #i.status.plcackn OR NOT #i.status.alarm THEN
+	        #i.status.siren := FALSE;
+	    END_IF;
+	    
+	    (*Alarm reset*)
+	    IF NOT #trigger AND #i.status.alarm AND ((#enackn AND #i.status.plcackn) OR NOT #enackn) AND #reset THEN
+	        #i.status.alarm := FALSE;
+	    END_IF;
+	    
+	    
+	ELSE
+	    #i.status.alarm :=  #i.status.siren := #i.don.countup := (*#hmiackn :=*) #i.status.plcackn := FALSE;
+	END_IF;
+	    
+	#plcackn := #i.status.plcackn;
+	#alarm := #i.status.alarm;
+	#siren := #i.status.siren;
+	
+	    (*Export data*)
+	    VariantPut(SRC:=#i,
+	               DST:=#Data);
+	    
+	    RETURN;
+END_FUNCTION
+

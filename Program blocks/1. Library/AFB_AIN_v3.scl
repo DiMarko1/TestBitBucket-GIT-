@@ -1,0 +1,357 @@
+﻿FUNCTION_BLOCK "AFB_AIN_v3"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      in { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // PIW to be unscaled
+      generalackn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // General acknowledgement
+      reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset faults
+      mute { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Mute siren
+      p1s { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse edge for 1Hz
+      p100ms { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse edge for 10Hz
+      t_sys {InstructionName := 'DTL'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DTL;   // System time
+      "type" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : UInt;   // Type of measurement: 0=hmi, 1=H-L, 2=factor
+   END_VAR
+
+   VAR_OUTPUT 
+      output { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Scaled Value
+   END_VAR
+
+   VAR_IN_OUT 
+      faults : "UDT_AINFAULTS";   // External data (Primary fault data - alarm & plc ackn)
+      warnings : "UDT_AINWARNS";   // External data (Primary warning data - alarm & plc ackn)
+   END_VAR
+
+   VAR DB_SPECIFIC
+      i : "UDT_AIN";   // UDT containing scale process data
+   END_VAR
+   VAR 
+      exp { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Exponential smoothing operands
+         init { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Initialization routine
+         Sn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Sn = n - output of smoothing
+         Xn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Xn = n - sample of analog value
+         lim_up { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Limit up
+         lim_down { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Limit down
+         t_buf {InstructionName := 'DTL'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : DTL;   // Time buffering from last call of the function
+         t_diff { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // t_diff = t_sys - t_buf (Ltime, ns)
+      END_STRUCT;
+      calc { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Calculations for scaling process
+         scalespan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Scaling span
+         chnspan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Channel span
+         xmax { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Channel maximum value
+         xmin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Channel minimum value
+         ymax { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Output maximum value
+         ymin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Output minimum value
+         x { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Active x value (channel)
+         y { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Active y value (output)
+         sign { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Linear scaling slope sign
+         scale { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Scaling
+            "type" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : UInt;   // Type of measurement: 0=hmi, 1=H-L, 2=factor
+            in { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Input to real number
+            scalehigh { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Real;   // High limit of scale process
+            scalelow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Real;   // Low limit of scale process
+            channelhigh { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Real;   // Channel high limit (ex. 27648)
+            channellow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Real;   // Channel high limit (ex. 0)
+            factor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'True'} : Real;   // Factor multiplied to real number
+            calc1 { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Calculation intermediate
+            span { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Span value
+            output { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Scaled value
+         END_STRUCT;
+      END_STRUCT;
+      lastob_si {InstructionName := 'SI_classic'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : SI_classic;   // System info type (Last OB call info)
+      startob_si {InstructionName := 'SI_classic'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : SI_classic;   // System info type (Startup OB call info)
+      err { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // System info retval
+      hilow { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Scaling based on hi-low
+      factor { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Scaling based on factor
+   END_VAR
+
+
+BEGIN
+	REGION GEN  NW:2-3
+	    
+	    //Network2: GEN: Move FC Inputs to UDT Inputs
+	    
+	    // IF #type = 1 OR #type = 2 THEN
+	    //     #i.chn.type := #type;
+	    // END_IF;
+	    
+	    //Network3: AIN: Convert analog input (AIN) to real
+	    
+	    #i.chn.in := INT_TO_REAL(#in);
+	    
+	END_REGION
+	
+	REGION SCALE  NW:4-7
+	    
+	    //Network4: AIN: Crosscheck if scaling is complete
+	    
+	    #hilow := #i.chn.type = 1 AND #i.scale.high <> #i.scale.low AND #i.chn.high <> #i.chn.low;
+	    #factor := #i.chn.type = 2 AND #i.scale.factor <> 0.0;
+	    
+	    #i.scale.set := #hilow OR #factor;
+	    
+	    //Network5: AIN: Determine sign of scaling slope and calculation operands (Hi - Low)
+	    
+	    IF #i.scale.set AND #hilow THEN
+	        #calc.scalespan := #i.scale.high - #i.scale.low;
+	        #calc.chnspan := #i.chn.high - #i.chn.low;
+	        #calc.x := #i.chn.in;
+	        IF #calc.scalespan > 0 AND #calc.chnspan > 0 THEN
+	            #calc.sign := TRUE;
+	            #calc.ymax := #i.scale.high;
+	            #calc.ymin := #i.scale.low;
+	            #calc.xmax := #i.chn.high;
+	            #calc.xmin := #i.chn.low;
+	        ELSIF #calc.scalespan < 0 AND #calc.chnspan < 0 THEN
+	            #calc.sign := TRUE;
+	            #calc.ymax := #i.scale.low;
+	            #calc.ymin := #i.scale.high;
+	            #calc.xmax := #i.chn.low;
+	            #calc.xmin := #i.chn.high;
+	        ELSIF #calc.scalespan < 0 AND #calc.chnspan > 0 THEN
+	            #calc.sign := FALSE;
+	            #calc.ymax := #i.scale.low;
+	            #calc.ymin := #i.scale.high;
+	            #calc.xmax := #i.chn.high;
+	            #calc.xmin := #i.chn.low;
+	        ELSE
+	            #calc.sign := FALSE;
+	            #calc.ymax := #i.scale.high;
+	            #calc.ymin := #i.scale.low;
+	            #calc.xmax := #i.chn.low;
+	            #calc.xmin := #i.chn.high;
+	        END_IF;
+	    ELSE
+	        #calc.scalespan := #calc.chnspan := #calc.xmax := #calc.xmin := #calc.ymax := #calc.ymin := 0;
+	    END_IF;
+	    
+	    //Network6: AIN: Determine sign of scaling slope and calculation operands (Hi - Low)
+	    
+	    IF #hilow AND #calc.sign THEN
+	        
+	        #calc.y := #calc.ymin + ((#calc.ymax - #calc.ymin) * (#calc.x - #calc.xmin) / (#calc.xmax - #calc.xmin));
+	        
+	        IF #calc.x <= #calc.xmin THEN
+	            #calc.y := #calc.ymin;
+	        END_IF;
+	        
+	        IF #calc.x >= #calc.xmax THEN
+	            #calc.y := #calc.ymax;
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    IF #hilow AND NOT #calc.sign THEN
+	        
+	        #calc.y := #calc.ymin + ((#calc.ymax - #calc.ymin) * (#calc.xmax - #calc.x) / (#calc.xmax - #calc.xmin));
+	        
+	        IF #calc.x <= #calc.xmin THEN
+	            #calc.y := #calc.ymax;
+	        END_IF;
+	        
+	        IF #calc.x >= #calc.xmax THEN
+	            #calc.y := #calc.ymin;
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    IF #hilow THEN
+	        #i.scaled := #calc.y;
+	    END_IF;
+	    
+	    //Network7: AIN: Scale AIN (Factor)
+	    
+	    IF #factor THEN
+	        #i.scaled := #i.chn.in * #i.scale.factor;
+	    END_IF;
+	    
+	    IF #factor AND #i.chn.in <= -32768.0 THEN
+	        #i.scaled := -9999.0;
+	    END_IF;
+	    
+	    IF #factor AND #i.chn.in >= 32767.0 THEN
+	        #i.scaled := 9999.0;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION SMOOTHING  NW:8
+	    
+	    //Network8: FILTER: Exponential smoothing
+	    
+	    IF #i.exp."en" AND NOT #i.sim."en" AND #i.scale.set AND FALSE THEN
+	        
+	        // Check system
+	        #err := RD_SINFO(TOP_SI => #lastob_si, START_UP_SI => #startob_si);
+	        
+	        // Init routine
+	        IF #lastob_si.EV_NUM = 1 OR #lastob_si.EV_NUM = 2 OR #lastob_si.EV_NUM = 4 THEN
+	            #exp.init := false;
+	        END_IF;
+	        
+	        // Enter routine
+	        #exp.Xn := #i.scaled;
+	        #exp.lim_up := #exp.Xn + #i.exp.limit;
+	        #exp.lim_down := #exp.Xn - #i.exp.limit;
+	        
+	        //#exp.t_diff := T_DIFF(IN1 := #t_sys, IN2 := #exp.t_buf);
+	        //#i.exp.dt := UDINT_TO_REAL(LTIME_TO_UDINT(#exp.t_diff)) / 1000000.0;
+	        
+	        IF #i.exp.T <= 0 THEN // Force the period to be higher than 0 to avoid infinity on the exponent
+	            #i.exp.T := #i.exp.dt / 1000.0;
+	        END_IF;
+	        
+	        IF #i.exp.dt > 0 AND #i.exp.T > #i.exp.dt / 1000.0 THEN
+	            #i.exp.a := 1 - EXP(- #i.exp.dt / (1000.0 * #i.exp.T));
+	        END_IF;
+	        
+	(* startup initialisation *)
+	        IF NOT #exp.init OR #i.exp.a <= 0 OR #i.exp.a >= 1 THEN
+	            #exp.init := TRUE;
+	            #exp.Sn := #exp.Xn;
+	        ELSIF #exp.Sn >= #exp.lim_down AND #exp.Sn <= #exp.lim_up THEN
+	            #exp.Sn := #exp.Xn;
+	        ELSE
+	            #exp.Sn := #exp.Sn + (#exp.Xn - #exp.Sn) * #i.exp.a;
+	        END_IF;
+	        
+	    ELSE
+	        #exp.init := false;
+	        #exp.Xn := #i.scaled;
+	        #exp.Sn := #i.scaled;
+	        
+	    END_IF;
+	    
+	    // Buffering
+	    #exp.t_buf := #t_sys;
+	    
+	    // Output
+	    #i.exp.init := #exp.init;
+	    #i.output := #exp.Sn;
+	    
+	END_REGION
+	
+	REGION SIMULATION  NW:9
+	    
+	    //Network9: SIM: Simulation
+	    
+	    IF #i.sim."en" THEN
+	        #i.output := #i.sim.value;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION FAULTS  NW:10-13
+	    
+	    //Network10: FAULT: HH
+	    
+	    "AFC_AlarmAckn"(trigger := #i.output >= #i.faults.sp_hh,
+	                    release := TRUE,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_hh,
+	                    alarm => #faults.ctrl.alarm_hh,
+	                    siren => #faults.status.siren_hh,
+	                    hmiackn := #faults.status.hmiackn_hh,
+	                    Data := #i.faults.hh);
+	    
+	    //Network11: FAULT: LL
+	    
+	    "AFC_AlarmAckn"(trigger := #i.output <= #i.faults.sp_ll,
+	                    release := TRUE,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_ll,
+	                    alarm => #faults.ctrl.alarm_ll,
+	                    siren => #faults.status.siren_ll,
+	                    hmiackn := #faults.status.hmiackn_ll,
+	                    Data := #i.faults.ll);
+	    
+	    //Network12: WARNING: H
+	    
+	    "AFC_AlarmAckn"(trigger := #i.output >= #i.faults.sp_h,
+	                    release := TRUE,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #warnings.ctrl.plcackn_h,
+	                    alarm => #warnings.ctrl.alarm_h,
+	                    siren => #warnings.status.siren_h,
+	                    hmiackn := #warnings.status.hmiackn_h,
+	                    Data := #i.faults.h);
+	    
+	    //Network13: WARNING: L
+	    
+	    "AFC_AlarmAckn"(trigger := #i.output <= #i.faults.sp_l,
+	                    release := TRUE,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #warnings.ctrl.plcackn_l,
+	                    alarm => #warnings.ctrl.alarm_l,
+	                    siren => #warnings.status.siren_l,
+	                    hmiackn := #warnings.status.hmiackn_l,
+	                    Data := #i.faults.l);
+	    
+	END_REGION
+	
+	REGION TREND  NW:14-15
+	    
+	    //Network14: TREND: Set trend high - low limit
+	    
+	    IF #hilow THEN
+	        #i.trendhigh := #calc.ymax + ABS(#calc.ymax) * 0.1;
+	        #i.trendlow := #calc.ymin - ABS(#calc.ymax) * 0.1;
+	    END_IF;
+	    
+	    //Network15: TREND: Set trend high - low limit
+	    
+	    IF #hilow THEN
+	        #i.trendhigh := 1.2 * #i.scale.low;
+	    END_IF;
+	    
+	    IF #hilow THEN
+	        #i.trendhigh := 1.2 * #i.scale.high;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION OUTPUT  NW:16
+	    
+	    //Network16: OUTPUT: Write to output
+	#output := #i.output;
+	    
+	END_REGION
+	
+	REGION BUTTON  NW:17
+	    
+	    //Network17: EXTRA: Button treatment
+	    
+	    IF #i.faults.fpreset THEN
+	        #i.faults.fpreset := FALSE;
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

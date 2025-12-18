@@ -1,0 +1,184 @@
+﻿FUNCTION_BLOCK "AFB_DIFF_v3"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      Minuend { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Minuend of subtraction
+      Subtrahend { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Subtrahend of subtraction
+      unit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : WString;   // Unit
+      generalackn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // General acknowledgement
+      reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset alarms
+      mute { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Mute siren
+      p1s { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse edge for 1Hz
+      p100ms { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse edge for 10Hz
+   END_VAR
+
+   VAR_OUTPUT 
+      output { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Scaled Value
+   END_VAR
+
+   VAR_IN_OUT 
+      faults : "UDT_AINFAULTS";   // External data (Primary fault data - alarm & plc ackn)
+      warnings : "UDT_AINWARNS";   // External data (Primary warning data - alarm & plc ackn)
+   END_VAR
+
+   VAR RETAIN
+      i : "UDT_DIFF";   // UDT containing scale process data
+   END_VAR
+
+
+BEGIN
+	REGION GEN  NW:2
+	    
+	    //Network2: GEN: Move FC Inputs to UDT
+	    
+	    #i.minuend := #Minuend;
+	    #i.subtrahend := #Subtrahend;
+	    
+	END_REGION
+	
+	REGION DIFF  NW:3-4
+	    
+	    //Network3: DIFF: Calculate Differential
+	    
+	    #i.output := #i.minuend - #i.subtrahend;
+	    
+	    //Network4: DIFF: Set unit
+	    
+	    #i.unit := #unit;
+	    
+	END_REGION
+	
+	REGION SIM  NW:5
+	    
+	    //Network5: SIM: Simulation
+	    
+	    IF #i.sim."en" THEN
+	        #i.output := #i.sim.value;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION FAULT  NW:6-9
+	    
+	    //Network6: FAULT: HH
+	    
+	    "AFC_AlarmAckn"(trigger := #i.output >= #i.faults.sp_hh,
+	                    release := TRUE,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_hh,
+	                    alarm => #faults.ctrl.alarm_hh,
+	                    siren => #faults.status.siren_hh,
+	                    hmiackn := #faults.status.hmiackn_hh,
+	                    Data := #i.faults.hh);
+	    
+	    //Network7: FAULT: LL
+	    
+	    "AFC_AlarmAckn"(trigger := #i.output <= #i.faults.sp_ll,
+	                    release := TRUE,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_ll,
+	                    alarm => #faults.ctrl.alarm_ll,
+	                    siren => #faults.status.siren_ll,
+	                    hmiackn := #faults.status.hmiackn_ll,
+	                    Data := #i.faults.ll);
+	    
+	    //Network8: WARNING: H
+	    
+	    "AFC_AlarmAckn"(trigger := #i.output >= #i.faults.sp_h,
+	                    release := TRUE,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #warnings.ctrl.plcackn_h,
+	                    alarm => #warnings.ctrl.alarm_h,
+	                    siren => #warnings.status.siren_h,
+	                    hmiackn := #warnings.status.hmiackn_h,
+	                    Data := #i.faults.h);
+	    
+	    //Network9: WARNING: L
+	    
+	    "AFC_AlarmAckn"(trigger := #i.output <= #i.faults.sp_l,
+	                    release := TRUE,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #warnings.ctrl.plcackn_l,
+	                    alarm => #warnings.ctrl.alarm_l,
+	                    siren => #warnings.status.siren_l,
+	                    hmiackn := #warnings.status.hmiackn_l,
+	                    Data := #i.faults.l);
+	    
+	END_REGION
+	
+	REGION OUTPUT  NW:10
+	    
+	    //Network10: OUTPUT: Write to output
+	    
+	    #output := #i.output;
+	    
+	END_REGION
+	
+	REGION BUTTON  NW:11
+	    
+	    //Network11: EXTRA: Button treatment
+	    
+	    IF #i.faults.fpreset THEN
+	        #i.faults.fpreset := FALSE;
+	    END_IF;
+	    
+	END_REGION
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+END_FUNCTION_BLOCK
+

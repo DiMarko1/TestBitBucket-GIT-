@@ -1,0 +1,607 @@
+﻿FUNCTION_BLOCK "AFB_MotorLinearCtrl_v3"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      start { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // "Logic" in order to start
+      followup { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0=motor control from PID, 1=motor setpoint directly from program
+      "fb" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Motor's running feedback (1=run, 0=stop)
+      mcb { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Motor circuit breaker (1=ok, 0=fault)
+      ctrl { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Control of motor (1=PLC, 0=Local)
+      vfdnotrip { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // VFD health condition (1=ok, 0=fault)
+      block { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Condition that blocks motor operation
+      generalackn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // General acknowledgement
+      reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Option that resets the faults
+      mute { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Mute siren
+      autoset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Option that sets the motor to auto mode (Used for mass auto set)
+      manualset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Option that sets the motor to manual mode (Used for mass manual set)
+      p1s { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse that is generated every 1 s (Count up)
+      p100ms { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse that is generated every 100 ms (Count up)
+      blink { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Blink that is used for the graphics (Frequency of CPU)
+      PV { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Peripheral value as independent variable to the linear controller
+      PV_unit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : WString;   // Peripheral value unit
+      FUP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Follow up value
+      Out_unit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : WString;   // Output unit (If nothing is entered then it is from the HMI)
+   END_VAR
+
+   VAR_OUTPUT 
+      run { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Command to start motor
+      vfb { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Virtual feedback (used everywhere instead of digital fb)
+      reference { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Reference to analog output card
+   END_VAR
+
+   VAR_IN_OUT 
+      faults : "UDT_MTRFAULTS";   // External data (Primary alarm data - alarm & plc ackn)
+   END_VAR
+
+   VAR RETAIN
+      i : "UDT_MOTORLINEAR";   // Data type containing the motor's data
+   END_VAR
+   VAR 
+      calc { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Calculations for scaling process
+         inspan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Scaling span
+         outspan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Channel span
+         xmax { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Channel maximum value
+         xmin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Channel minimum value
+         ymax { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Output maximum value
+         ymin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Output minimum value
+         x { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Active x value (channel)
+         y { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Active y value (output)
+         speedmin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Minimum speed
+         speedmax { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Maximum speed
+         sign { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Linear scaling slope sign
+      END_STRUCT;
+   END_VAR
+
+   VAR_TEMP 
+      ctrl_internal : Bool;   // Internal control (0=follow up, 1=linear)
+      condSET : Bool;
+      condRESET : Bool;
+   END_VAR
+
+
+BEGIN
+	REGION GEN  NW:2
+	    
+	    //Network2: GEN: Move FB inputs to UDT inputs
+	    
+	    #ctrl_internal := NOT #followup AND #i.ctrl.linear;
+	    #i.ctrl.PV := #PV;
+	    #i.ctrl.FUP := #FUP;
+	    #i.ctrl.pvunit := #PV_unit;
+	    
+	    IF #Out_unit <> WSTRING#'' THEN
+	        #i.ctrl.outunit := #Out_unit;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION STATUS  NW:3-4
+	    
+	    //Network3: STATUS: Virtual feedback
+	    
+	    #i.status.vfb := (#fb AND NOT #i.sim.fb) OR (#i.out.run AND #i.sim.fb);
+	    
+	    //Network4: STATUS: Virtual control
+	    
+	    #i.status.vctrl := #i.sim.ctrl OR (#ctrl AND NOT #i.sim.ctrl);
+	    
+	END_REGION
+	
+	REGION FAULT  NW:5-10
+	    
+	    //Network5: FAULT: Fail to run
+	    
+	    "AFC_AlarmAckn"(trigger := NOT #i.status.vfb AND #i.out.run AND #i.status.vctrl,
+	                    release := NOT #i.sim.fb,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_ftr,
+	                    alarm => #faults.ctrl.alarm_ftr,
+	                    siren => #faults.status.siren_ftr,
+	                    hmiackn := #faults.status.hmiackn_ftr,
+	                    Data := #i.faults.ftr);
+	    
+	    //Network6: FAULT: Fail to stop
+	    
+	    "AFC_AlarmAckn"(trigger := #i.status.vfb AND NOT #i.out.run AND #i.status.vctrl,
+	                    release := NOT #i.sim.fb,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_fts,
+	                    alarm => #faults.ctrl.alarm_fts,
+	                    siren => #faults.status.siren_fts,
+	                    hmiackn := #faults.status.hmiackn_fts,
+	                    Data := #i.faults.fts);
+	    
+	    //Network7: FAULT: Monor circuit breaker
+	    
+	    "AFC_AlarmAckn"(trigger := NOT #mcb,
+	                    release := NOT #i.sim.fb,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_mcb,
+	                    alarm => #faults.ctrl.alarm_mcb,
+	                    siren => #faults.status.siren_mcb,
+	                    hmiackn := #faults.status.hmiackn_mcb,
+	                    Data := #i.faults.mcb);
+	    
+	    //Network8: FAULT: Control
+	    
+	    "AFC_AlarmAckn"(trigger := NOT #i.status.vctrl AND #i.out.run,
+	                    release := NOT #i.sim.ctrl,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_ctrl,
+	                    alarm => #faults.ctrl.alarm_ctrl,
+	                    siren => #faults.status.siren_ctrl,
+	                    hmiackn := #faults.status.hmiackn_ctrl,
+	                    Data := #i.faults.ctrl);
+	    
+	    //Network9: FAULT: Variable frequency drive
+	    
+	    "AFC_AlarmAckn"(trigger := NOT #vfdnotrip,
+	                    release := TRUE,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_vfd,
+	                    alarm => #faults.ctrl.alarm_vfd,
+	                    siren => #faults.status.siren_vfd,
+	                    hmiackn := #faults.status.hmiackn_vfd,
+	                    Data := #i.faults.vfd);
+	    
+	    //Network10: FAULT: Interlock violation
+	    
+	    "AFC_AlarmAckn"(trigger := #start AND #block,
+	                    release := #i.status.ilstart,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_il,
+	                    alarm => #faults.ctrl.alarm_il,
+	                    siren => #faults.status.siren_il,
+	                    hmiackn := #faults.status.hmiackn_il,
+	                    Data := #i.faults.il);
+	    
+	END_REGION
+	
+	REGION STATUS  NW:11-12
+	    
+	    //Network11: STATUS: General Fault
+	    
+	    #i.status.fault := #i.faults.ftr.status.alarm OR #i.faults.fts.status.alarm OR #i.faults.mcb.status.alarm OR #i.faults.ctrl.status.alarm OR #i.faults.vfd.status.alarm OR #i.faults.il.status.alarm;
+	    
+	    //Network12: STATUS: Start interlock
+	    
+	    #i.status.ilstart := NOT (#block OR #i.status.fault) AND #i.status.vctrl AND #i.unscale.set AND (NOT #ctrl_internal OR #i.scale.set OR #i.ctrl.mode);
+	    
+	END_REGION
+	
+	REGION CONTROL  NW:13-15
+	    
+	    //Network13: CONTROL: Manual Set
+	    
+	    #condSET := #i.cmd.man OR #manualset;
+	    #condRESET := #i.cmd.auto OR #autoset;
+	    
+	    #i.ind.man := (#i.ind.man OR #condSET) AND NOT #condRESET;
+	    
+	    //Network14: CONTROL: Auto Set
+	    
+	    #i.ind.auto := NOT #i.ind.man;
+	    
+	    //Network15: CONTROL: Manual Run
+	    
+	    #condSET := #i.cmd.start AND #i.ind.man;
+	    #condRESET := #i.cmd.stop OR NOT (#i.ind.man AND #i.status.ilstart);
+	    
+	    #i.out.manrun := (#i.out.manrun OR #condSET) AND NOT #condRESET;
+	    
+	END_REGION
+	
+	REGION STATUS  NW:16-17
+	    
+	    //Network16: STATUS: Motor's icon
+	    
+	    #i.status.icon := 0;
+	    
+	    IF #i.status.vfb AND NOT #i.status.fault AND #i.status.vctrl
+	    THEN
+	        #i.status.icon := 1;
+	    ELSIF #i.status.vfb AND NOT #i.status.fault AND NOT #i.status.vctrl
+	    THEN
+	        #i.status.icon := 2;
+	    ELSIF #i.status.fault AND #blink
+	    THEN
+	        #i.status.icon := 3;
+	    END_IF;
+	    
+	    //Network17: STATUS:Start/Stop Buttons
+	    
+	    #i.ind.start := #i.out.manrun AND #i.ind.man;
+	    #i.ind.stop := NOT #i.out.manrun AND #i.ind.man;
+	    
+	END_REGION
+	
+	REGION OUTPUT  NW:18
+	    
+	    //Network18: OUTPUT: Start motor
+	    
+	    #condSET := #i.status.ilstart AND (#i.out.manrun OR (#start AND #i.ind.auto));
+	    #condRESET := NOT #i.status.ilstart;
+	    
+	    "AFC_DelayONOFF"(cmd := #condSET,
+	                     Pulse := #p100ms,
+	                     Reset := #condRESET,
+	                     on => #i.out.run,
+	                     Data := #i.delay);
+	    
+	END_REGION
+	
+	REGION SCALE  NW:19-22
+	    
+	    //Network19: SCALE: Move input
+	    
+	    #i.scale.in := #i.ctrl.PV;
+	    
+	    //Network20: SCALE: Cross-check unscaling setup
+	    
+	    #i.scale.set := (#i.scale.instart <> #i.scale.inend) AND (#i.scale.outstart <> #i.scale.outend);
+	    
+	    //Network21: SCALE: Determine sign of scaling slope and calculation operands (Hi - Low)
+	    
+	    IF #i.scale.set THEN
+	        #calc.inspan := #i.scale.inend - #i.scale.instart;
+	        #calc.outspan := #i.scale.outend - #i.scale.outstart;
+	        #calc.x := #i.scale.in;
+	        IF #calc.inspan > 0 AND #calc.outspan > 0 THEN
+	            #calc.sign := TRUE;
+	            #calc.ymax := #i.scale.outend;
+	            #calc.ymin := #i.scale.outstart;
+	            #calc.xmax := #i.scale.inend;
+	            #calc.xmin := #i.scale.instart;
+	        ELSIF #calc.inspan < 0 AND #calc.outspan < 0 THEN
+	            #calc.sign := TRUE;
+	            #calc.ymax := #i.scale.outstart;
+	            #calc.ymin := #i.scale.outend;
+	            #calc.xmax := #i.scale.instart;
+	            #calc.xmin := #i.scale.inend;
+	        ELSIF #calc.inspan < 0 AND #calc.outspan > 0 THEN
+	            #calc.sign := FALSE;
+	            #calc.ymax := #i.scale.outstart;
+	            #calc.ymin := #i.scale.outend;
+	            #calc.xmax := #i.scale.inend;
+	            #calc.xmin := #i.scale.instart;
+	        ELSE
+	            #calc.sign := FALSE;
+	            #calc.ymax := #i.scale.outend;
+	            #calc.ymin := #i.scale.outstart;
+	            #calc.xmax := #i.scale.instart;
+	            #calc.xmin := #i.scale.inend;
+	        END_IF;
+	    ELSE
+	        #calc.inspan := #calc.outspan := #calc.xmax := #calc.xmin := #calc.ymax := #calc.ymin := 0;
+	    END_IF;
+	    
+	    //Network22: SCALE: Determine output
+	    
+	    IF #i.scale.set AND #calc.sign THEN
+	        
+	        #calc.y := #calc.ymin + ((#calc.ymax - #calc.ymin) * (#calc.x - #calc.xmin) / (#calc.xmax - #calc.xmin));
+	        
+	        IF #calc.x <= #calc.xmin THEN
+	            #calc.y := #calc.ymin;
+	        END_IF;
+	        
+	        IF #calc.x >= #calc.xmax THEN
+	            #calc.y := #calc.ymax;
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    IF #i.scale.set AND NOT #calc.sign THEN
+	        
+	        #calc.y := #calc.ymin + ((#calc.ymax - #calc.ymin) * (#calc.xmax - #calc.x) / (#calc.xmax - #calc.xmin));
+	        
+	        IF #calc.x <= #calc.xmin THEN
+	            #calc.y := #calc.ymax;
+	        END_IF;
+	        
+	        IF #calc.x >= #calc.xmax THEN
+	            #calc.y := #calc.ymin;
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    IF #i.scale.set THEN
+	        #i.scale.output := #calc.y;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION SPEED CONTROL  NW:23-27
+	    
+	    //Network23: SPEED CONTROL: Manage speed control limits
+	    
+	    IF (#i.ctrl.ITLVAL < #calc.speedmin) AND (#i.ctrl.ITLVAL > #calc.speedmax) THEN
+	        #i.ctrl.ITLVAL := #calc.speedmin;
+	    END_IF;
+	    
+	    IF (#i.ctrl.OFFVAL < #calc.speedmin) AND (#i.ctrl.ITLVAL > #calc.speedmax) THEN
+	        #i.ctrl.OFFVAL := #calc.speedmin;
+	    END_IF;
+	    
+	    //Network24: SPEED CONTROL: Determine if initialization routine is required
+	    
+	    #i.ctrl.init.req := (#i.ctrl.ITLVAL > #calc.speedmin) AND (#i.ctrl.init.dur < 0);
+	    
+	    //Network25: SPEED CONTROL: Determine the delay SP
+	    
+	    IF NOT #i.out.run AND #i.ctrl.init.req THEN
+	        #i.ctrl.init.delay.in.spon := #i.ctrl.init.dur;
+	    END_IF;
+	    
+	    IF NOT #i.out.run AND NOT #i.ctrl.init.req THEN
+	        #i.ctrl.init.delay.in.spon := 0.0;
+	    END_IF;
+	    
+	    IF #i.ctrl.mode OR NOT #ctrl_internal THEN
+	        #i.ctrl.init.delay.in.spon := 0.0;
+	    END_IF;
+	    
+	    //Network26: SPEED CONTROL: Delay for holding an init value
+	    
+	    "AFC_DelayONOFF"(cmd := #i.out.run,
+	                     Pulse := #p100ms,
+	                     Reset := NOT #i.out.run,
+	                     on => #i.ctrl.init.delay.out.on,
+	                     Data := #i.ctrl.init.delay);
+	    
+	    //Network27: SPEED CONTROL: Load output
+	    
+	    IF NOT #i.ctrl.mode THEN
+	        
+	        IF NOT #i.out.run THEN
+	            
+	            IF NOT #ctrl_internal THEN
+	                
+	                IF #i.ctrl.init.delay.out.on THEN
+	                    #i.ctrl.OP := #i.scale.output;
+	                END_IF;
+	                
+	                IF #i.ctrl.init.delay.out.on THEN
+	                    #i.ctrl.OP := #i.ctrl.ITLVAL;
+	                END_IF;
+	                
+	            END_IF;
+	            
+	        ELSIF NOT #ctrl_internal THEN
+	            
+	             #i.ctrl.OP := #i.ctrl.FUP;
+	             
+	        ELSE // 20240403: CH - Added "ELSE" for linear control
+	             #i.ctrl.OP := #i.scale.output;
+	            
+	        END_IF;
+	        
+	    ELSIF #i.ctrl.mode THEN
+	        
+	         IF NOT #i.out.run AND NOT #i.ctrl.mode THEN
+	            #i.ctrl.OP := #i.ctrl.OFFVAL;
+	        END_IF;
+	        
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION ARH  NW:28
+	    
+	    //Network28: ARH: Working hours counter
+	    
+	    IF #i.status.vfb AND #p1s THEN
+	        #i.arh.seconds := #i.arh.seconds + 1;
+	    END_IF;
+	    
+	    #i.arh.hour := #i.arh.seconds >= 3600;
+	    
+	    IF #i.arh.hour THEN
+	        #i.arh.actual := #i.arh.actual + 1;
+	        #i.arh.seconds := 0;
+	    END_IF;
+	    
+	    IF #i.arh.resetarh THEN
+	        #i.arh.actual := #i.arh.lastmaint := 0;
+	    END_IF;
+	    
+	    #i.arh.difference := #i.arh.actual - #i.arh.lastmaint;
+	    
+	END_REGION
+	
+	REGION UNSCALE  NW:29-33
+	    
+	    //Network29: UNSCALE: Move input
+	    
+	    #i.unscale.in := #i.ctrl.OP;
+	    
+	    //Network30: UNSCALE: Cross-check unscaling setup
+	    
+	    #i.unscale.set := (#i.unscale.inhigh <> #i.unscale.inlow) AND (#i.unscale.outhigh <> #i.unscale.outlow);
+	    
+	    //Network31: UNSCALE: Determine sign of scaling slope and calculation operands (Hi - Low)
+	    
+	    IF #i.unscale.set THEN
+	        #calc.inspan := #i.unscale.inhigh - #i.unscale.inlow;
+	        #calc.outspan := #i.unscale.outhigh - #i.unscale.outlow;
+	        #calc.x := #i.unscale.in;
+	        IF #calc.inspan > 0 AND #calc.outspan > 0 THEN
+	            #calc.sign := TRUE;
+	            #calc.ymax := #i.unscale.outhigh;
+	            #calc.ymin := #i.unscale.outlow;
+	            #calc.xmax := #i.unscale.inhigh;
+	            #calc.xmin := #i.unscale.inlow;
+	        ELSIF #calc.inspan < 0 AND #calc.outspan < 0 THEN
+	            #calc.sign := TRUE;
+	            #calc.ymax := #i.unscale.outlow;
+	            #calc.ymin := #i.unscale.outhigh;
+	            #calc.xmax := #i.unscale.inlow;
+	            #calc.xmin := #i.unscale.inhigh;
+	        ELSIF #calc.inspan < 0 AND #calc.outspan > 0 THEN
+	            #calc.sign := FALSE;
+	            #calc.ymax := #i.unscale.outlow;
+	            #calc.ymin := #i.unscale.outhigh;
+	            #calc.xmax := #i.unscale.inhigh;
+	            #calc.xmin := #i.unscale.inlow;
+	        ELSE
+	            #calc.sign := FALSE;
+	            #calc.ymax := #i.unscale.outhigh;
+	            #calc.ymin := #i.unscale.outlow;
+	            #calc.xmax := #i.unscale.inlow;
+	            #calc.xmin := #i.unscale.inhigh;
+	        END_IF;
+	        #calc.speedmin := #calc.xmin;
+	        #calc.speedmax := #calc.xmax;
+	    ELSE
+	        #calc.inspan := #calc.outspan := #calc.xmax := #calc.xmin
+	        := #calc.ymax := #calc.ymin := #calc.speedmin := #calc.speedmax := 0.0;
+	    END_IF;
+	    
+	    //Network32: UNSCALE: Determine output
+	    
+	    IF #i.unscale.set AND #calc.sign THEN
+	        
+	        #calc.y := #calc.ymin + ((#calc.ymax - #calc.ymin) * (#calc.x - #calc.xmin) / (#calc.xmax - #calc.xmin));
+	        
+	        IF #calc.x <= #calc.xmin THEN
+	            #calc.y := #calc.ymin;
+	        END_IF;
+	        
+	        IF #calc.x >= #calc.xmax THEN
+	            #calc.y := #calc.ymax;
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    IF #i.unscale.set AND NOT #calc.sign THEN
+	        
+	        #calc.y := #calc.ymin + ((#calc.ymax - #calc.ymin) * (#calc.xmax - #calc.x) / (#calc.xmax - #calc.xmin));
+	        
+	        IF #calc.x <= #calc.xmin THEN
+	            #calc.y := #calc.ymax;
+	        END_IF;
+	        
+	        IF #calc.x >= #calc.xmax THEN
+	            #calc.y := #calc.ymin;
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    IF #i.unscale.set THEN
+	        #i.unscale.output := #calc.y;
+	    END_IF;
+	    
+	    IF NOT #i.unscale.set THEN
+	        #i.unscale.output := 0.0;
+	    END_IF;
+	    
+	    //Network33: UNSCALE: Convert to INT
+	    
+	    #i.out."ref" := REAL_TO_INT(#i.unscale.output);
+	    
+	END_REGION
+	
+	REGION UNSCALE  NW:34-35
+	    
+	    //Network34: ARH: Maintenance required
+	    
+	    #condSET := #i.arh.difference >= #i.arh.checkafter;
+	    #condRESET := (#i.arh.completed AND #i.arh.maintenance) OR NOT #i.arh.enable;
+	    
+	    #i.arh.maintenance := (#i.arh.maintenance OR #condSET) AND NOT #condRESET;
+	    
+	    IF #i.arh.completed AND #i.arh.maintenance THEN
+	        #i.arh.lastmaint := #i.arh.actual;
+	    END_IF;
+	    
+	    
+	    //Network35: STATUS: Maintenance required
+	    
+	    #i.status.maint := #i.arh.maintenance;
+	    
+	END_REGION
+	
+	REGION OUTPUT  NW:36
+	    
+	    //Network36: Move UDT outputs to FC outputs
+	    
+	    #run := #i.out.run;
+	    #vfb := #i.status.vfb;
+	    
+	    #reference := #i.out."ref";
+	    
+	END_REGION
+	
+	REGION BUTTON  NW:37
+	    
+	    //Network37: EXTRA: Button treatment
+	    
+	    IF #i.ind.auto THEN
+	        #i.cmd.auto := FALSE;
+	    END_IF;
+	    
+	    IF #i.ind.man THEN
+	        #i.cmd.man := FALSE;
+	    END_IF;
+	    
+	    IF #i.ind.start OR #i.ind.auto OR NOT #i.status.ilstart THEN
+	        #i.cmd.start := FALSE;
+	    END_IF;
+	    
+	    IF #i.ind.stop OR #i.ind.auto THEN
+	        #i.cmd.stop := FALSE;
+	    END_IF;
+	    
+	    IF #i.faults.fpreset THEN
+	        #i.faults.fpreset := FALSE;
+	    END_IF;
+	    
+	    IF (#i.arh.seconds = 0) AND (#i.arh.actual = 0) THEN
+	        #i.arh.resetarh := FALSE;
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

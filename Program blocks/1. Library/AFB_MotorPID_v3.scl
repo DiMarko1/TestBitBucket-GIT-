@@ -1,0 +1,614 @@
+﻿FUNCTION_BLOCK "AFB_MotorPID_v3"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      start { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // "Logic" in order to start
+      spsource { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0=internal setpoint, 1=external setpoint
+      followup { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0=motor control from PID, 1=motor setpoint directly from program
+      pidrun { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // 0=controller not ready, controller is running
+      "fb" { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Motor's running feedback (1=run, 0=stop)
+      mcb { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Motor circuit breaker (1=ok, 0=fault)
+      ctrl { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Control of motor (1=PLC, 0=Local)
+      vfdnotrip { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // VFD health condition (1=ok, 0=fault)
+      block { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Condition that blocks motor operation
+      generalackn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // General acknowledgement
+      reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Option that resets the faults
+      mute { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Mute siren
+      autoset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Option that sets the motor to auto mode (Used for mass auto set)
+      manualset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Option that sets the motor to manual mode (Used for mass manual set)
+      p1s { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse that is generated every 1 s (Count up)
+      p100ms { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse that is generated every 100 ms (Count up)
+      blink { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Blink that is used for the graphics (Frequency of CPU)
+      PV { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Peripheral value reference to the controller
+      PV_unit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : WString;   // Peripheral value unit
+      EXT_SP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // External setpoint
+      FUP { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Follow up value
+      Out_unit { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : WString;   // Output unit (If nothing is entered then it is from the HMI)
+   END_VAR
+
+   VAR_OUTPUT 
+      run { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Command to start motor
+      vfb { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Virtual feedback (used everywhere instead of digital fb)
+      reference { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Int;   // Reference to analog output card
+   END_VAR
+
+   VAR_IN_OUT 
+      faults : "UDT_MTRFAULTS";   // External data (Primary alarm data - alarm & plc ackn)
+   END_VAR
+
+   VAR RETAIN
+      i : "UDT_MOTOR";   // Data type containing the motor's data
+   END_VAR
+   VAR 
+      cont { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Controller
+         COM_RST { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Restart command
+         MAN_ON { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Manual control
+         SP_INT { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Setpoint internal
+         PV_IN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Peripheral value
+         GAIN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Proportional gain loaded according to the action (signed)
+         TI { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Time;   // Integral time
+         TD { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Time;   // Derivative time
+         LMN_HLM { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Controller's higher LMN value (%)
+         LMN_LLM { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Controller's lower LMN value (%)
+         LMN_FAC { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // LMN factor
+         LMN_OFF { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // LMN offset
+         I_ITLVAL { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Controller's integral initialization value (%)
+         LMN { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Controller's manipulated value
+      END_STRUCT;
+      calc { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Struct   // Calculations for scaling process
+         inspan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Scaling span
+         outspan { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Channel span
+         xmax { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Channel maximum value
+         xmin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Channel minimum value
+         ymax { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Output maximum value
+         ymin { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Output minimum value
+         x { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Active x value (channel)
+         y { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   // Active y value (output)
+         sign { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Linear scaling slope sign
+      END_STRUCT;
+   END_VAR
+
+   VAR_TEMP 
+      condSET : Bool;
+      condRESET : Bool;
+   END_VAR
+
+
+BEGIN
+	REGION GEN  NW:2
+	    
+	    //Network2: GEN: Move FB inputs to UDT inputs
+	    
+	    #i.pid.spsource := #spsource;
+	    #i.pid.followup := #followup;
+	    #i.pid.pidrun := #pidrun;
+	    #i.pid.PV := #PV;
+	    #i.pid.EXT_SP := #EXT_SP;
+	    #i.pid.FUP := #FUP;
+	    #i.pid.pvunit := #PV_unit;
+	    
+	    IF #PV_unit <> WSTRING#'' THEN
+	        #i.pid.pvunit := #PV_unit;
+	    END_IF;
+	    
+	    IF #Out_unit <> WSTRING#'' THEN
+	        #i.pid.outunit := #Out_unit;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION STATUS  NW:3-4
+	    
+	    //Network3: STATUS: Virtual feedback
+	    
+	    #i.status.vfb := (#fb AND NOT #i.sim.fb) OR (#i.out.run AND #i.sim.fb);
+	    
+	    //Network4: STATUS: Virtual control
+	    
+	    #i.status.vctrl := #i.sim.ctrl OR (#ctrl AND NOT #i.sim.ctrl);
+	    
+	END_REGION
+	
+	REGION FAULT  NW:5-10
+	    
+	    //Network5: FAULT: Fail to run
+	    
+	    "AFC_AlarmAckn"(trigger := NOT #i.status.vfb AND #i.out.run AND #i.status.vctrl,
+	                    release := NOT #i.sim.fb,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_ftr,
+	                    alarm => #faults.ctrl.alarm_ftr,
+	                    siren => #faults.status.siren_ftr,
+	                    hmiackn := #faults.status.hmiackn_ftr,
+	                    Data := #i.faults.ftr);
+	    
+	    //Network6: FAULT: Fail to stop
+	    
+	    "AFC_AlarmAckn"(trigger := #i.status.vfb AND NOT #i.out.run AND #i.status.vctrl,
+	                    release := NOT #i.sim.fb,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_fts,
+	                    alarm => #faults.ctrl.alarm_fts,
+	                    siren => #faults.status.siren_fts,
+	                    hmiackn := #faults.status.hmiackn_fts,
+	                    Data := #i.faults.fts);
+	    
+	    //Network7: FAULT: Monor circuit breaker
+	    
+	    "AFC_AlarmAckn"(trigger := NOT #mcb,
+	                    release := NOT #i.sim.fb,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_mcb,
+	                    alarm => #faults.ctrl.alarm_mcb,
+	                    siren => #faults.status.siren_mcb,
+	                    hmiackn := #faults.status.hmiackn_mcb,
+	                    Data := #i.faults.mcb);
+	    
+	    //Network8: FAULT: Control
+	    
+	    "AFC_AlarmAckn"(trigger := NOT #i.status.vctrl AND #i.out.run,
+	                    release := NOT #i.sim.ctrl,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_ctrl,
+	                    alarm => #faults.ctrl.alarm_ctrl,
+	                    siren => #faults.status.siren_ctrl,
+	                    hmiackn := #faults.status.hmiackn_ctrl,
+	                    Data := #i.faults.ctrl);
+	    
+	    //Network9: FAULT: Variable frequency drive
+	    
+	    "AFC_AlarmAckn"(trigger := NOT #vfdnotrip,
+	                    release := TRUE,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_vfd,
+	                    alarm => #faults.ctrl.alarm_vfd,
+	                    siren => #faults.status.siren_vfd,
+	                    hmiackn := #faults.status.hmiackn_vfd,
+	                    Data := #i.faults.vfd);
+	    
+	    //Network10: FAULT: Interlock violation
+	    
+	    "AFC_AlarmAckn"(trigger := #start AND #block,
+	                    release := #i.status.ilstart,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #faults.ctrl.plcackn_il,
+	                    alarm => #faults.ctrl.alarm_il,
+	                    siren => #faults.status.siren_il,
+	                    hmiackn := #faults.status.hmiackn_il,
+	                    Data := #i.faults.il);
+	    
+	END_REGION
+	
+	REGION STATUS  NW:11-12
+	    
+	    //Network11: STATUS: General Fault
+	    
+	    #i.status.fault := #i.faults.ftr.status.alarm OR #i.faults.fts.status.alarm OR #i.faults.mcb.status.alarm OR #i.faults.ctrl.status.alarm OR #i.faults.vfd.status.alarm OR #i.faults.il.status.alarm;
+	    
+	    //Network12: STATUS: Start interlock
+	    
+	    #i.status.ilstart := NOT (#block OR #i.status.fault) AND #i.status.vctrl AND #i.unscale.set;
+	    
+	END_REGION
+	
+	REGION CONTROL  NW:13-15
+	    
+	    //Network13: CONTROL: Manual Set
+	    
+	    #condSET := #i.cmd.man OR #manualset;
+	    #condRESET := #i.cmd.auto OR #autoset;
+	    
+	    #i.ind.man := (#i.ind.man OR #condSET) AND NOT #condRESET;
+	    
+	    //Network14: CONTROL: Auto Set
+	    
+	    #i.ind.auto := NOT #i.ind.man;
+	    
+	    //Network15: CONTROL: Manual Run
+	    
+	    #condSET := #i.cmd.start AND #i.ind.man;
+	    #condRESET := #i.cmd.stop OR (NOT #i.ind.man) AND (NOT #i.status.ilstart);
+	    
+	    #i.out.manrun := (#i.out.manrun OR #condSET) AND NOT #condRESET;
+	    
+	END_REGION
+	
+	REGION STATUS  NW:16-17
+	    
+	    //Network16: STATUS: Motor's icon
+	    
+	    #i.status.icon := 0;
+	    
+	    IF #i.status.vfb AND NOT #i.status.fault AND #i.status.vctrl
+	    THEN
+	        #i.status.icon := 1;
+	    ELSIF #fb AND NOT #i.status.fault AND NOT #i.status.vctrl
+	    THEN
+	        #i.status.icon := 2;
+	    ELSIF #i.status.fault AND #blink
+	    THEN
+	        #i.status.icon := 3;
+	    END_IF;
+	    
+	    //Network17: STATUS:Start/Stop Buttons
+	    
+	    #i.ind.start := #i.out.manrun AND #i.ind.man;
+	    #i.ind.stop := NOT #i.out.manrun AND #i.ind.man;
+	    
+	END_REGION
+	
+	REGION OUTPUT  NW:18
+	    
+	    //Network18: OUTPUT: Start motor
+	    
+	    #condSET := #i.status.ilstart AND (#i.out.manrun OR (#start AND #i.ind.auto));
+	    #condRESET := NOT #i.status.ilstart;
+	    
+	    "AFC_DelayONOFF"(cmd := #condSET,
+	                     Pulse := #p100ms,
+	                     Reset := #condRESET,
+	                     on => #i.out.run,
+	                     Data := #i.delay);
+	    
+	END_REGION
+	
+	REGION CONTROLLER  NW:19
+	    
+	    //Network19: CONTROLLER: Load from PID block
+	    
+	    #i.pid.LMN := #cont.LMN;
+	    
+	END_REGION
+	
+	REGION PID  NW:20-27
+	    
+	    //Network20: PID: Manage controller's limits
+	    
+	    IF #i.pid.H <= #i.pid.L THEN
+	        #i.pid.H := #i.pid.L := #calc.xmin;
+	    END_IF;
+	    
+	    IF #i.pid.H > #calc.xmax THEN
+	        #i.pid.H := #calc.xmax;
+	    END_IF;
+	    
+	    IF #i.pid.L < #calc.xmin THEN
+	        #i.pid.L := #calc.xmin;
+	    END_IF;
+	    
+	    IF (#i.pid.ITLVAL < #i.pid.L) AND (#i.pid.ITLVAL > #i.pid.H) THEN
+	        #i.pid.ITLVAL := #calc.xmin;
+	    END_IF;
+	    
+	    IF (#i.pid.OFFVAL < #i.pid.L) AND (#i.pid.ITLVAL > #i.pid.H) THEN
+	        #i.pid.OFFVAL := #calc.xmin;
+	    END_IF;
+	    
+	    
+	    //Network21: PID: Load SP
+	    
+	    IF #i.pid.spsource THEN
+	        #i.pid.SP := #i.pid.EXT_SP;
+	    END_IF;
+	    
+	    
+	    //Network22: PID: Determine if initialization routine is required
+	    
+	    #i.pid.init.req := (#i.pid.ITLVAL > #i.pid.L) AND (#i.pid.init.dur > 0.0);
+	    
+	    //Network23: PID: Determine the delay SP
+	    
+	    IF NOT #i.out.run AND #i.pid.init.req THEN
+	        #i.pid.init.delay.in.spon := #i.pid.init.dur;
+	    END_IF;
+	    
+	    IF NOT #i.out.run AND NOT #i.pid.init.req THEN
+	        #i.pid.init.delay.in.spon := 0.0;
+	    END_IF;
+	    
+	    IF #i.pid.mode = #i.pid.followup THEN
+	        #i.pid.init.delay.in.spon := 0.0;
+	    END_IF;
+	    
+	    
+	    //Network24: PID: Delay for holding an init value
+	    
+	    "AFC_DelayONOFF"(cmd := #i.out.run,
+	                     Pulse := #p100ms,
+	                     Reset := NOT #i.out.run,
+	                     on => #i.pid.init.delay.out.on,
+	                     Data := #i.pid.init.delay);
+	    
+	    //Network25: PID: Reset the controller
+	    
+	    #i.pid.cmdrst := NOT #i.pid.init.delay.out.on OR #i.pid.mode OR #i.pid.followup;
+	    
+	    //Network26: PID: Load output
+	    
+	    IF NOT #i.pid.mode THEN
+	        
+	        IF #i.out.run THEN
+	            
+	            IF NOT #i.pid.followup THEN
+	                
+	                IF #i.pid.pidrun THEN
+	                    #i.pid.OP := #i.pid.LMN;
+	                END_IF;
+	                
+	                IF #i.pid.cmdrst THEN
+	                    #i.pid.OP := #i.pid.ITLVAL;
+	                END_IF;
+	                
+	            ELSIF #i.pid.followup THEN
+	                
+	                #i.pid.OP := #i.pid.FUP;
+	                
+	            END_IF;
+	            
+	        END_IF;
+	        
+	        IF NOT #i.out.run THEN
+	            #i.pid.OP := #i.pid.OFFVAL;
+	        END_IF;
+	        ;
+	        
+	    END_IF;
+	    
+	    //Network27: PID: Limit output
+	    
+	    IF #i.pid.OP < #calc.xmin THEN
+	        #i.pid.OP := #calc.xmin;
+	    END_IF;
+	    
+	    IF #i.pid.OP > #calc.xmax THEN
+	        #i.pid.OP := #calc.xmax;
+	    END_IF;
+	    
+	END_REGION
+	
+	REGION UNSCALE  NW:28-32
+	    
+	    //Network28: UNSCALE: Move input
+	    
+	    #i.unscale.in := #i.pid.OP;
+	    
+	    //Network29: UNSCALE: Cross-check unscaling setup
+	    
+	    #i.unscale.set := (#i.unscale.inhigh <> #i.unscale.inlow) AND (#i.unscale.outhigh <> #i.unscale.outlow);
+	    
+	    //Network30: UNSCALE: Determine sign of scaling slope and calculation operands (Hi - Low)
+	    
+	    IF #i.unscale.set THEN
+	        #calc.inspan := #i.unscale.inhigh - #i.unscale.inlow;
+	        #calc.outspan := #i.unscale.outhigh - #i.unscale.outlow;
+	        #calc.x := #i.unscale.in;
+	        IF #calc.inspan > 0 AND #calc.outspan > 0 THEN
+	            #calc.sign := TRUE;
+	            #calc.ymax := #i.unscale.outhigh;
+	            #calc.ymin := #i.unscale.outlow;
+	            #calc.xmax := #i.unscale.inhigh;
+	            #calc.xmin := #i.unscale.inlow;
+	        ELSIF #calc.inspan < 0 AND #calc.outspan < 0 THEN
+	            #calc.sign := TRUE;
+	            #calc.ymax := #i.unscale.outlow;
+	            #calc.ymin := #i.unscale.outhigh;
+	            #calc.xmax := #i.unscale.inlow;
+	            #calc.xmin := #i.unscale.inhigh;
+	        ELSIF #calc.inspan < 0 AND #calc.outspan > 0 THEN
+	            #calc.sign := FALSE;
+	            #calc.ymax := #i.unscale.outlow;
+	            #calc.ymin := #i.unscale.outhigh;
+	            #calc.xmax := #i.unscale.inhigh;
+	            #calc.xmin := #i.unscale.inlow;
+	        ELSE
+	            #calc.sign := FALSE;
+	            #calc.ymax := #i.unscale.outhigh;
+	            #calc.ymin := #i.unscale.outlow;
+	            #calc.xmax := #i.unscale.inlow;
+	            #calc.xmin := #i.unscale.inhigh;
+	        END_IF;
+	    ELSE
+	        #calc.inspan := #calc.outspan := #calc.xmax := #calc.xmin := #calc.ymax := #calc.ymin := 0;
+	    END_IF;
+	    
+	    //Network31: UNSCALE: Determine output
+	    
+	    IF #i.unscale.set AND #calc.sign THEN
+	        
+	        #calc.y := #calc.ymin + ((#calc.ymax - #calc.ymin) * (#calc.x - #calc.xmin) / (#calc.xmax - #calc.xmin));
+	        
+	        IF #calc.x <= #calc.xmin THEN
+	            #calc.y := #calc.ymin;
+	        END_IF;
+	        
+	        IF #calc.x >= #calc.xmax THEN
+	            #calc.y := #calc.ymax;
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    IF #i.unscale.set AND NOT #calc.sign THEN
+	        
+	        #calc.y := #calc.ymin + ((#calc.ymax - #calc.ymin) * (#calc.xmax - #calc.x) / (#calc.xmax - #calc.xmin));
+	        
+	        IF #calc.x <= #calc.xmin THEN
+	            #calc.y := #calc.ymax;
+	        END_IF;
+	        
+	        IF #calc.x >= #calc.xmax THEN
+	            #calc.y := #calc.ymin;
+	        END_IF;
+	        
+	    END_IF;
+	    
+	    IF #i.unscale.set THEN
+	        #i.unscale.output := #calc.y;
+	    END_IF;
+	    
+	    IF NOT #i.unscale.set THEN
+	        #i.unscale.output := 0.0;
+	    END_IF;
+	    
+	    //Network32: UNSCALE: Convert to INT
+	    
+	    #i.out."ref" := REAL_TO_INT(#i.unscale.output);
+	    
+	END_REGION
+	
+	REGION CONTROLLER  NW:33
+	    
+	    //Network33: CONTROLLER: Load to PID block
+	    
+	    #cont.COM_RST := #i.pid.cmdrst;
+	    
+	    #cont.MAN_ON := #i.pid.mode;
+	    
+	    #cont.SP_INT := #i.pid.SP;
+	    
+	    #cont.PV_IN := #i.pid.PV;
+	    
+	    IF #i.pid.action THEN
+	        #cont.GAIN := ABS_REAL(#i.pid.P);
+	    ELSE
+	        #cont.GAIN := 0.0 - ABS_REAL(#i.pid.P);
+	    END_IF;
+	    
+	    #cont.TI := DINT_TO_TIME(#i.pid.I);
+	    
+	    #cont.TD := DINT_TO_TIME(#i.pid.D);
+	    
+	    #cont.LMN_HLM := ((#i.pid.H - #calc.xmin) / (#calc.xmax - #calc.xmin)) * 100.0;
+	    
+	    #cont.LMN_LLM := ((#i.pid.L - #calc.xmin) / (#calc.xmax - #calc.xmin)) * 100.0;
+	    
+	    #cont.LMN_FAC := (#calc.xmax - #calc.xmin) / 100.0;
+	    
+	    #cont.LMN_OFF := #calc.xmin;
+	    
+	    #cont.I_ITLVAL := ((#i.pid.OP - #calc.xmin) / (#calc.xmax - #calc.xmin)) * 100.0;
+	    
+	END_REGION
+	
+	
+	REGION MNT  NW:34-36
+	    
+	    //Network34: ARH: Working hours counter
+	    
+	    IF #i.status.vfb AND #p1s THEN
+	        #i.arh.seconds := #i.arh.seconds + 1;
+	    END_IF;
+	    
+	    #i.arh.hour := (#i.arh.seconds >= 3600);
+	    
+	    IF #i.arh.hour THEN
+	        #i.arh.actual := #i.arh.actual + 1;
+	        #i.arh.seconds := 0;
+	    END_IF;
+	    
+	    IF #i.arh.resetarh THEN
+	        #i.arh.actual := #i.arh.lastmaint := 0;
+	    END_IF;
+	    
+	    #i.arh.difference := #i.arh.actual - #i.arh.lastmaint;
+	    
+	    //Network35: ARH: Maintenance required
+	    
+	    #condSET := #i.arh.difference >= #i.arh.checkafter;
+	    #condRESET := (#i.arh.completed AND #i.arh.maintenance) OR NOT #i.arh.enable;
+	    
+	    #i.arh.maintenance := (#i.arh.maintenance OR #condSET) AND NOT #condRESET;
+	    
+	    IF #i.arh.completed AND #i.arh.maintenance THEN
+	        #i.arh.lastmaint := #i.arh.actual;
+	    END_IF;
+	    
+	    //Network36: STATUS: Maintenance required
+	    
+	    #i.status.maint := #i.arh.maintenance;
+	    
+	END_REGION
+	
+	REGION OUTPUT  NW:37
+	    
+	    //Network37: Move UDT outputs to FC outputs
+	    
+	    #run := #i.out.run;
+	    #vfb := #i.status.vfb;
+	    
+	    #reference := #i.out."ref";
+	    
+	END_REGION
+	
+	REGION BUTTON  NW:38
+	    
+	    //Network38: EXTRA: Button treatment
+	    
+	    IF #i.ind.auto THEN
+	        #i.cmd.auto := FALSE;
+	    END_IF;
+	    
+	    IF #i.ind.man THEN
+	        #i.cmd.man := FALSE;
+	    END_IF;
+	    
+	    IF #i.ind.start OR #i.ind.auto OR NOT #i.status.ilstart THEN
+	        #i.cmd.start := FALSE;
+	    END_IF;
+	    
+	    IF #i.ind.stop OR #i.ind.auto THEN
+	        #i.cmd.stop := FALSE;
+	    END_IF;
+	    
+	    IF #i.faults.fpreset THEN
+	        #i.faults.fpreset := FALSE;
+	    END_IF;
+	    
+	    IF (#i.arh.seconds = 0) AND (#i.arh.actual = 0) THEN
+	        #i.arh.resetarh := FALSE;
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

@@ -1,0 +1,140 @@
+﻿FUNCTION_BLOCK "AFB_DIN_v3"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      input { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Digital Switch input in normal state
+      monitorfault { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Release fault monitoring
+      p1s { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse edge for 1Hz
+      p100ms { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Pulse edge for 10Hz
+      generalackn { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // General acknowledgement
+      reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Reset Fault
+      mute { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Mute siren
+   END_VAR
+
+   VAR_OUTPUT 
+      Switch { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   // Switch after time cross check
+   END_VAR
+
+   VAR_IN_OUT 
+      alarm_din { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      plcackn_din { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      siren_din { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      hmiackn_din { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+   END_VAR
+
+   VAR RETAIN
+      i : "UDT_DIN";   // Temporary Switch Data
+   END_VAR
+
+   VAR_TEMP 
+      condSET : Bool;
+      condRESET : Bool;
+   END_VAR
+
+
+BEGIN
+	REGION SIM  NW:2-3
+	    
+	    //Network2: SIM: Simulation
+	    
+	    #i.sim.simulated := (#i.sim.simulated OR #i.sim.cmdon) AND NOT #i.sim.cmdoff;
+	    
+	    //Network3: SIM: Force
+	    
+	    #condSET := #i.sim.cmdforce;
+	    #condRESET := #i.sim.cmdunforce OR NOT #i.sim.simulated;
+	    
+	    #i.sim.forced := (#i.sim.forced OR #condSET) AND NOT #condRESET;
+	    
+	END_REGION
+	
+	REGION STATUS  NW:4-6
+	    
+	    //Network4: STATUS: Raw input
+	    
+	    #i.status.rawinput := #input;
+	    
+	    //Network5: STATUS: Processed input 
+	    
+	    #i.status.processed := (#input AND NOT #i.setup.polarity) OR (NOT #input AND #i.setup.polarity);
+	    
+	    //Network6: STATUS: Alarm monitor 
+	    
+	    #i.status.alarm_monitor := #monitorfault AND #i.faults.din.setup."en";
+	    
+	END_REGION
+	
+	REGION DIN  NW:7-9
+	    
+	    //Network7: DIN: Reset actual timers 
+	    
+	    IF (#i.status.processed AND #i.status.switch_active) OR #i.sim.simulated THEN
+	        #i."time".on_act := #i."time".off_act := 0;
+	    END_IF;
+	    
+	    IF NOT (#i.status.processed OR #i.status.switch_active) OR #i.sim.simulated THEN
+	        #i."time".on_act := #i."time".off_act := 0;
+	    END_IF;
+	    
+	    //Network8: DIN: Counter
+	    
+	    IF #p1s AND (#i.status.processed AND NOT #i.status.switch_active) THEN
+	        #i."time".on_act := #i."time".on_act + 1;
+	    END_IF;
+	    
+	    IF #p1s AND (NOT #i.status.processed AND #i.status.switch_active) THEN
+	        #i."time".off_act := #i."time".off_act + 1;
+	    END_IF;
+	    
+	    //Network9: DIN: Set switch active
+	    
+	    #condSET := #i.sim.forced OR (#i.status.processed AND NOT #i.sim.simulated AND #i."time".on_act >= #i."time".on_set);
+	    #condRESET := (NOT #i.sim.forced AND #i.sim.simulated) OR (NOT #i.status.processed AND NOT #i.sim.simulated AND #i."time".off_act >= #i."time".off_set);
+	    
+	    #i.status.switch_active := (#i.status.switch_active OR #condSET) AND NOT #condRESET;
+	    
+	END_REGION
+	
+	REGION FAULT   NW:10
+	    
+	    //Network10: FAULT: Switch activated
+	    
+	    #condSET := NOT (#i.setup.triggerversion OR #i.status.switch_active) OR (#i.setup.triggerversion AND #i.status.switch_active);
+	    
+	    "AFC_AlarmAckn"(trigger := #condSET,
+	                    release := #monitorfault,
+	                    ctrlpoint := FALSE,
+	                    enackn := TRUE,
+	                    ensiren := TRUE,
+	                    p100ms := #p100ms,
+	                    generalackn := #generalackn OR #i.faults.fpreset,
+	                    reset := #reset OR #i.faults.fpreset,
+	                    mute := #mute,
+	                    delay := 0.0,
+	                    plcackn => #plcackn_din,
+	                    alarm => #alarm_din,
+	                    siren => #siren_din,
+	                    hmiackn := #hmiackn_din,
+	                    Data := #i.faults.din);
+	    
+	END_REGION
+	
+	REGION OUTPUT   NW:11
+	    
+	    //Network11: GEN: Move UDT Outputs to FC Outputs
+	    
+	    #Switch := #i.status.switch_active;
+	    
+	END_REGION
+	
+	REGION BUTTON  NW:12
+	    
+	    //Network12: EXTRA: Button treatment
+	    
+	    IF #i.faults.fpreset THEN
+	        #i.faults.fpreset := FALSE;
+	    END_IF;
+	    
+	END_REGION
+END_FUNCTION_BLOCK
+

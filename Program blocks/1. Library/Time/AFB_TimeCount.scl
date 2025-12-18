@@ -1,0 +1,107 @@
+﻿FUNCTION_BLOCK "AFB_TimeCount"
+TITLE = AFB_HoursCounter
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : CH
+FAMILY : Aktina
+NAME : 'TIME'
+VERSION : 0.1
+//AFB_HoursCounter
+   VAR_INPUT 
+      trigger { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE: Run timer
+      reset { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE: Reset timer
+      p1s { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE: 1 second pulse
+      preset : "dtTimerArguments";   //  Preset timer arguments
+   END_VAR
+
+   VAR_OUTPUT 
+      done : Bool;   //  TRUE: Preset time elapsed
+      remain : "dtTimerArguments";   //  Remaining timer arguments
+   END_VAR
+
+   VAR 
+      statPresetSec : UDInt;   //  Static value for preset time
+   END_VAR
+   VAR RETAIN
+      statSec : UDInt;   //  Static value for seconds counted
+      statRem : Struct   //  Static value for minutes remaining
+         sec : UDInt;   //  seconds
+         min : UDInt;   //  minutes
+         hour : UDInt;   //  hours
+      END_STRUCT;
+   END_VAR
+
+   VAR_TEMP 
+      tempTrigger : Bool;   //  Temporary value for input 'trigger'
+      tempReset : Bool;   //  Temporary value for input 'reset'
+   END_VAR
+
+
+BEGIN
+	REGION BLOCK HEADER
+	     //===============================================================================
+	     // CH / (c)Copyright (2021)
+	     //-------------------------------------------------------------------------------
+	     // Title:             (Hours counter)
+	     // Comment/Function:  (Hours counter)
+	     // Library/Family:    (Aktina/Tools/Time)
+	     // Author:            (CH)
+	     // Tested with:       (V16)
+	     // Engineering:       (TIA Step7 Professional V16)
+	     // Restrictions:      ()
+	     // Requirements:      (S7 CPUs)
+	     // Notes:             ()
+	     //-------------------------------------------------------------------------------
+	     // Change log table:
+	     // Version  | Date       | Dev in charge          | Changes
+	     //----------|------------|------------------------|------------------------------
+	     // 01.00.00 | 2021-03-13 | (CH)                   | First released version
+	     //===============================================================================
+	END_REGION
+	
+	REGION GENERIC PRE-INSTRUCTIONS
+	     // Work with temporary value / create process image
+	     #tempReset := #reset;
+	     #tempTrigger := (#tempReset = FALSE) AND (#trigger = TRUE) AND (#p1s = TRUE);
+	END_REGION GENERIC PRE-INSTRUCTIONS
+	
+	REGION END WHEN RESET
+	     IF (#tempReset = TRUE)
+	     THEN // Nothing to do -> End here to reduce "system load"
+	          #statSec := 0;
+	          #statPresetSec := 0;
+	          #statRem.sec := 0;
+	          #statRem.min := 0;
+	          #statRem.hour := 0;
+	          #remain.sec := 0;
+	          #remain.min := 0;
+	          #remain.hour := 0;
+	          #done := FALSE;
+	          RETURN;
+	     END_IF;
+	     
+	END_REGION END WHEN RESET
+	
+	REGION TIMER
+	     #statPresetSec := (UINT_TO_UDINT(#preset.hour) * 3600) + (USINT_TO_UDINT(#preset.min) * 60) + USINT_TO_UDINT(#preset.sec);
+	     
+	     IF (#tempTrigger = TRUE) AND (#statSec < #statPresetSec)
+	     THEN
+	          #statSec := #statSec + 1;
+	     END_IF;
+	END_REGION TIMER
+	
+	REGION OUTPUT
+	     #done := ((#trigger = TRUE) AND (#statPresetSec = 0)) OR ((#statSec >= #statPresetSec) AND (#statPresetSec > 0));
+	     
+	     #statRem.sec := #statPresetSec - #statSec;
+	     
+	     #statRem.hour := #statRem.sec / 3600;
+	     #statRem.min := (#statRem.sec / 60) - (#statRem.hour * 60);
+	     
+	     #remain.sec := UDINT_TO_USINT(#statRem.sec - (#statRem.min * 60) - (#statRem.hour * 3600));
+	     #remain.min := UDINT_TO_USINT(#statRem.min);
+	     #remain.hour := UDINT_TO_USINT(#statRem.hour);
+	END_REGION OUTPUT
+	
+END_FUNCTION_BLOCK
+

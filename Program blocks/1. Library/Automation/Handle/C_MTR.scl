@@ -1,0 +1,109 @@
+﻿FUNCTION_BLOCK "C_MTR"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      enable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;   //  TRUE: Enable module
+      index : Int;   //  INDEX
+      cmd : Bool;   //  TRUE: Activate main
+      block : Bool;   //  TRUE: Block activation
+      followUp : Bool;   //  TRUE: Follow-up
+      spSource : Bool;   //  TRUE: External setpoint
+      FUP : Real;   //  Follow up speed
+      SP : Real;   //  SP for PID control
+      PV : Real;   //  PV for PID control
+      PVunit : WString;   //  Unit of PID PV
+   END_VAR
+
+   VAR_OUTPUT 
+      vfb : Bool;
+      fault : Bool;
+      justStarted : Bool;
+      justStopped : Bool;
+      justHadFault : Bool;
+      justLostFault : Bool;
+      enabled : Bool;
+      auto : Bool;
+   END_VAR
+
+   VAR 
+      status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_STATUS_MTR";
+   END_VAR
+
+   VAR_TEMP 
+      module : "UDT_MOTOR";
+      resetStatus : "UDT_STATUS_MTR";
+   END_VAR
+
+
+BEGIN
+	IF #enable THEN
+	    
+	    #status.enabled := TRUE;
+	    
+	    #module := "MOD".MTR[#index].i;
+	    
+	    REGION STATUS
+	        
+	        #status.running := #module.status.vfb;
+	        #status.inFault := #module.status.fault;
+	        #status.auto := #module.ind.auto;
+	        
+	        #status.justStarted := "detectPE"(newValue := #status.running, oldValue := #status.old.running);
+	        #status.justStopped := "detectNE"(newValue := #status.running, oldValue := #status.old.running);
+	        #status.justHadFault := "detectPE"(newValue := #status.inFault, oldValue := #status.old.fault);
+	        #status.justLostFault := "detectNE"(newValue := #status.inFault, oldValue := #status.old.fault);
+	        
+	        #status.old.running := #status.running;
+	        #status.old.fault := #status.inFault;
+	        
+	
+	        
+	    END_REGION
+	    
+	    REGION COMMAND
+	        
+	        "MOD".MTR[#index].start := #cmd;
+	         "MOD".MTR[#index].block := #"block";
+	         "MOD".MTR[#index].followup := #"followUp";
+	         "MOD".MTR[#index].spsource := #spSource;
+	         
+	         "MOD".MTR[#index].FUP := #FUP;
+	         "MOD".MTR[#index].EXT_SP := #SP;
+	         "MOD".MTR[#index].PV := #PV;
+	         "MOD".MTR[#index].PV_unit := #PVunit;
+	         
+	         
+	    END_REGION
+	    
+	    REGION SIM
+	        
+	        "MOD".MTR[#index].i.sim.fb := "MODULES_CTRL".MTR[#index].sim.simFb;
+	        "MOD".MTR[#index].i.sim.ctrl := "MODULES_CTRL".MTR[#index].sim.simCtrl;
+	        
+	    END_REGION
+	    
+	ELSE
+	    
+	    #status := #resetStatus;
+	    
+	    "MOD".MTR[#index].start := FALSE;
+	    "MOD".MTR[#index].block := FALSE;
+	    "MOD".MTR[#index].followup := FALSE;
+	    "MOD".MTR[#index].spsource := FALSE;
+	    
+	END_IF;
+	
+	REGION Output
+	    
+	    #vfb:= #status.running;
+	    #justStarted := #status.justStarted;
+	    #justStopped := #status.justStopped;
+	    #fault := #status.inFault;
+	    #justHadFault := #status.justHadFault;
+	    #justLostFault := #status.justLostFault;
+	    #enabled := #status.enabled;
+	    #auto := #status.auto;
+	    
+	END_REGION Output
+END_FUNCTION_BLOCK
+

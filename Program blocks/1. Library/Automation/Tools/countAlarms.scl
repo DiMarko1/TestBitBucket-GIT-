@@ -1,0 +1,31 @@
+﻿FUNCTION "countAlarms" : UDInt
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      byteIn : Byte;
+   END_VAR
+
+   VAR_TEMP 
+      i : UDInt;
+      count : UDInt;
+   END_VAR
+
+   VAR CONSTANT 
+      ONE : Word := 16#1;
+   END_VAR
+
+
+BEGIN
+	FOR #i := 0 TO 7 DO
+	    
+	    IF (#byteIn AND SHL(IN := #ONE, N := #i)) <> 0 THEN
+	        
+	        #count := #count + 1;
+	        
+	    END_IF;
+	    
+	END_FOR;
+	
+	#countAlarms := #count;
+END_FUNCTION
+

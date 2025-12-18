@@ -1,0 +1,339 @@
+﻿FUNCTION_BLOCK "AFB_OptionCtrl"
+TITLE = AFB_OptionCtrl
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : CH
+FAMILY : Aktina
+NAME : Operator
+VERSION : 0.1
+//AFB_OptionCtrl
+   VAR_INPUT 
+      number : Int;   //  Number of options to scan (cannot exceed CT_MAX_OPTIONS)
+      optIn : Array[0..#ctARRAY_OPTION] of "typeOptionIn";   //  Array of all options incoming conditions from sequencers and environment
+   END_VAR
+
+   VAR_OUTPUT 
+      availAct3Mains : Bool;   //  TRUE: Provide an action 1 - 4 (start - stop - end, all highight dependent)
+      availActCancel : Bool;   //  TRUE: Provide an action 8 (cancel all)
+      availActConfirm : Bool;   //  TRUE: Provide an action 16 (confirm, highight dependent)
+      availActResetTime : Bool;   //  TRUE: Provide an action 32 (reset time, highlight dependent)
+   END_VAR
+
+   VAR_IN_OUT 
+      action : Int;   //  Actions from the operation center (0-none, 1=start, 2=stop, 4=end, 8=cancel, 16=confirm)
+      optOut : Array[0..#ctARRAY_OPTION] of "typeOptionOut";   //  Array of all options outgoing conditions & status
+   END_VAR
+
+   VAR 
+      statNumber : Int;   //  Static value for the "number" input
+      statDetChange : Array[0..#ctARRAY_OPTION] of Byte;   //  Static array of bytes used to detect changes in options status
+      statAction : Struct   //  Temporary struct used to translate the action int to bits
+         bit8 : Bool;
+         bit9 : Bool;
+         bit10 : Bool;
+         bit11 : Bool;
+         bit12 : Bool;
+         bit13 : Bool;
+         bit14 : Bool;
+         bit15 : Bool;
+         start : Bool;
+         stop : Bool;
+         end : Bool;
+         cancel : Bool;
+         confirm : Bool;
+         resetTime : Bool;
+         bit6 : Bool;
+         bit7 : Bool;
+      END_STRUCT;
+      statAvailAct3Mains : Bool;   //  Static bit for "availAct3Mains" output
+      statAvailActCancel : Bool;   //  Static bit for "availActCancel" output
+      statAvailActConfirm : Bool;   //  Static bit for "availActConfirm" output
+      statAvailActResetTime : Bool;   //  Static bit for "availActResetTime" output
+      bufferTOFs {InstructionName := 'IEC_TIMER'; LibVersion := '1.0'; S7_SetPoint := 'False'} : Array[0..#ctARRAY_OPTION] of IEC_TIMER;   //  Static group of highlight timers buffers
+      instTimer {InstructionName := 'IEC_TIMER'; LibVersion := '1.0'; ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : IEC_TIMER;   //  Instance timer used for all highlights
+   END_VAR
+
+   VAR_TEMP 
+      tempN : Int;   //  Temporary "n" loop operand
+      tempIn : "typeOptionIn";   //  Temporary memory area for the "optBitsIn" input (read only)
+      tempOut : "typeOptionOut";   //  Temporary memory area for the "optBitsOut" output (read & write)
+      tempStatus : Word;   //  Temporary status buffer
+      tempAction : Word;   //  Temporary memory area for the "action" inout
+      tempDetectBefore : Byte;   //  Temporary status change detection buffer before program execution (used to reset highlights individually)
+      tempDetectAfter : Byte;   //  Temporary status change detection buffer after program execution (used to reset highlights individually)
+      tempDetAllow1to4 : Bool;   //  Temporary bit used to detect an active highlight to allow actions 1 to 4
+      tempDetAllow8 : Bool;   //  Temporary bit used to detect an active procedure to allow action 8
+      tempDetAllow16 : Bool;   //  Temporary bit used to detect an active highlight and prompt to allow action 16
+      tempDetAllow32 : Bool;   //  Temporary bit used to detect an active highlight and timeout to allow action 32
+   END_VAR
+
+   VAR CONSTANT 
+      ctARRAY_OPTION : Int := 7;   //  Constant value for the arrays upper limit (CT_MAX_OPTIONS - 1)
+      ctMAX_OPTIONS : Int := 8;   //  Constant value for the maximum option number (better handle as 8, 16, 32 etc)
+      ctNULL : Word := 16#0000;   //  Constant Word = 16#0
+   END_VAR
+
+
+BEGIN
+	REGION BLOCK HEADER
+	    //===============================================================================
+	    // CH / (c)Copyright (2021)
+	    //-------------------------------------------------------------------------------
+	    // Title:             (Options Control)
+	    // Comment/Function:  (Control multiple options using the same set of action keys)
+	    // Library/Family:    (Aktina/Tools/Operation)
+	    // Author:            (CH)
+	    // Tested with:       (V16)
+	    // Engineering:       (TIA Step7 Professional V16)
+	    // Restrictions:      ()
+	    // Requirements:      (S7-15xx/12xx CPUs)
+	    // Notes:             (See block notes)
+	    //-------------------------------------------------------------------------------
+	    // Change log table:
+	    // Version  | Date       | Dev in charge          | Changes
+	    //----------|------------|------------------------|------------------------------
+	    // 01.00.00 | 2021-07-27 | (CH)                   | First released version
+	    //===============================================================================
+	END_REGION
+	
+	REGION BLOCK NOTES
+	    //===============================================================================
+	    // 1: The number of options participating is configured by the CT_MAX_OPTION
+	    //-------------------------------------------------------------------------------
+	    // 2: Each option has a group of status bits and a unique status number that
+	    // transfer the information to the operation center
+	    //===============================================================================
+	END_REGION
+	
+	REGION GENERIC PRE-INSTRUCTIONS
+	    // Init temporary area
+	    #tempN := 0;
+	    "AFC_Word_To_Struct"(w := #ctNULL,
+	                         s => #tempIn.cond);
+	    #tempIn.tof := 0;
+	    #tempOut.cond := #tempIn.cond;
+	    #tempOut.status := 0;
+	    #tempStatus := 0;
+	    #tempDetectBefore := 0;
+	    #tempDetectAfter := 0;
+	    #tempDetAllow1to4 := FALSE;
+	    #tempDetAllow8 := FALSE;
+	    
+	    // Import and evaluate number of options
+	    IF (#number <= #ctMAX_OPTIONS) AND (#number >= 0)
+	    THEN // write input to stat unchanged
+	        #statNumber := #number;
+	    ELSIF (#number > #ctMAX_OPTIONS)
+	    THEN // automatically adapt maximum options number to the static variable
+	        #statNumber := #ctMAX_OPTIONS;
+	    ELSE // in any other case write 0 to stat
+	        #statNumber := 0;
+	    END_IF;
+	    
+	    // Transfer actions int to bit
+	    "AFC_Word_To_Struct"(w := INT_TO_WORD(#action),
+	                         s => #statAction);
+	    
+	END_REGION GENERIC PRE-INSTRUCTIONS
+	
+	REGION CONTROL OPTIONS
+	    
+	    IF #statNumber > 0
+	    THEN // Run the loop only if there is a reason. If there are no options then stop it
+	        
+	        FOR #tempN := 0 TO (#statNumber - 1) DO
+	            
+	            REGION import data to scanned instance
+	                // Import: Saved data to temporary memory area
+	                #tempDetectBefore := #statDetChange[#tempN];
+	                
+	                #tempIn := #optIn[#tempN];
+	                #tempOut := #optOut[#tempN];
+	                
+	                // Load timer
+	                PRESET_TIMER(PT := DINT_TO_TIME(#tempIn.tof),
+	                             TIMER := #bufferTOFs[#tempN]);
+	                
+	                #instTimer := #bufferTOFs[#tempN];
+	                
+	            END_REGION import data to scanned instance
+	            
+	            REGION create output conditions
+	                // Status: Option relevant error
+	                #tempOut.cond.error := (#tempIn.cond.ongoing = TRUE) AND (#tempIn.cond.error = TRUE);
+	                
+	                // Status: Block option from starting
+	                #tempOut.cond.block := (#tempIn.cond.block = TRUE); // AND (#tempIn.cond.ongoing = FALSE)
+	                
+	                // Timer: Highlight
+	                #instTimer.TOF(IN := (#tempIn.cond.highlight = TRUE)
+	                               AND (((#tempOut.cond.block = FALSE) AND (#tempIn.cond.error = FALSE))
+	                               OR ((#tempIn.cond.ongoing = TRUE) AND (#tempOut.cond.endCond = FALSE))),
+	                               PT := #instTimer.PT);
+	                
+	                // Status: Highlight
+	                #tempOut.cond.highlight := #instTimer.Q;
+	                
+	                // Status: Start condition (hold till highlight is reset or process is set)
+	                #tempOut.cond.startCond := (((#tempOut.cond.highlight = TRUE) AND ((#statAction.start = TRUE) OR (#tempOut.cond.startCond = TRUE)))
+	                OR (#tempIn.cond.extStart = TRUE))
+	                AND (#tempIn.cond.ongoing = FALSE)
+	                AND NOT ((#tempOut.cond.highlight = TRUE) AND ((#statAction.stop = TRUE) OR (#statAction.end = TRUE)))
+	                AND NOT (#statAction.cancel = TRUE) AND NOT (#tempIn.cond.extCancel = TRUE)
+	                ;
+	                
+	                // Status: Run (hold till error, end or pause)
+	                #tempOut.cond.run := (#tempIn.cond.ongoing = TRUE) AND (#tempIn.cond.error = FALSE)
+	                AND NOT ((#tempOut.cond.highlight = TRUE) AND ((#statAction.stop = TRUE) OR (#statAction.end = TRUE))) AND NOT (#statAction.cancel = TRUE)
+	                AND ((#tempOut.cond.run = TRUE) OR ((#tempOut.cond.highlight = TRUE) AND (#statAction.start = TRUE)) OR (#tempIn.cond.extStart = TRUE));
+	                
+	                // Status: Hibernate (invert run)
+	                #tempOut.cond.hibernate := (#tempIn.cond.ongoing = TRUE) AND (#tempOut.cond.run = FALSE);
+	                
+	                // Status: End condition
+	                #tempOut.cond.endCond := (#tempIn.cond.ongoing = TRUE)
+	                AND (((#tempOut.cond.highlight = TRUE) AND (#statAction.end = TRUE)) OR (#statAction.cancel = TRUE) OR (#tempOut.cond.endCond = TRUE));
+	                
+	                // Status: Timed out
+	                #tempOut.cond.timeout := (#tempIn.cond.ongoing = TRUE) AND (#tempIn.cond.timeout = TRUE);
+	                
+	                // Status: Prompt for confirmation
+	                #tempOut.cond.prompt := (#tempIn.cond.ongoing = TRUE) AND (#tempIn.cond.prompt = TRUE);
+	                
+	                // Status: Confirmation acknowledgement
+	                #tempOut.cond.confirm := (#tempIn.cond.ongoing = TRUE) AND (#tempOut.cond.prompt = TRUE) AND (#statAction.confirm = TRUE);
+	                
+	                // Status: Timeout acknowledgement
+	                #tempOut.cond.resetTime := (#tempIn.cond.ongoing = TRUE) AND (#tempOut.cond.timeout = TRUE) AND (#tempOut.cond.highlight = TRUE) AND (#statAction.resetTime = TRUE);
+	                
+	                // Status: Collective integer
+	                "AFC_Struct_To_Word"(s := #tempOut.cond,
+	                                     w => #tempStatus);
+	                
+	                #tempOut.status := WORD_TO_UINT(#tempStatus);
+	                
+	            END_REGION create output conditions
+	            
+	            REGION actions allowance
+	                // Detect: Change in run or enabled (used to reset highlight)
+	                #tempDetectAfter := 16#0;
+	                #tempDetectAfter.%X0 := #tempIn.cond.ongoing;
+	                #tempDetectAfter.%X1 := #tempOut.cond.run;
+	                #tempDetectAfter.%X2 := #tempOut.cond.prompt;
+	                
+	                IF (#tempDetectBefore <> #tempDetectAfter) OR (#tempOut.cond.block = TRUE) OR (#tempOut.cond.highlight = TRUE AND (#statAction.end = TRUE)) OR (#statAction.cancel = TRUE)
+	                THEN
+	                    RESET_TIMER(#instTimer);
+	                    #tempOut.cond.highlight := false;
+	                END_IF;
+	                
+	                // Detect: Allow commands 1 to 4
+	                IF (#tempOut.cond.highlight = TRUE)
+	                THEN
+	                    #tempDetAllow1to4 := TRUE;
+	                END_IF;
+	                
+	                // Detect: Allow command 8
+	                IF (#tempIn.cond.ongoing = TRUE) OR (#tempOut.cond.highlight = TRUE)
+	                THEN
+	                    #tempDetAllow8 := TRUE;
+	                END_IF;
+	                
+	                // Detect: Allow command 16
+	                IF (#tempOut.cond.prompt = TRUE)
+	                THEN
+	                    #tempDetAllow16 := TRUE;
+	                END_IF;
+	                
+	                // Detect: Allow command 32
+	                IF (#tempOut.cond.timeout = TRUE)
+	                THEN
+	                    #tempDetAllow32 := TRUE;
+	                END_IF;
+	                
+	            END_REGION actions allowance
+	            
+	            REGION export data to scanned instance
+	                // Return: Save data
+	                #optOut[#tempN] := #tempOut;
+	                #bufferTOFs[#tempN] := #instTimer;
+	                #statDetChange[#tempN] := #tempDetectAfter;
+	                
+	            END_REGION export data TO scanned INSTANCE  
+	            
+	        END_FOR;
+	        
+	    END_IF;
+	    
+	    REGION reset inactive options data
+	        // Run the loop to reset the remaining not used options
+	        FOR #tempN := #statNumber TO #ctARRAY_OPTION DO
+	            
+	            "AFC_Word_To_Struct"(w := #ctNULL,
+	                                 s => #tempOut.cond);
+	            
+	            #tempStatus := 16#0;
+	            #tempOut.status := WORD_TO_UINT(#tempStatus);
+	            
+	            // Return temporary data to runtime data
+	            #optOut[#tempN] := #tempOut;
+	            
+	            RESET_TIMER(#bufferTOFs[#tempN]);
+	            
+	        END_FOR;
+	        
+	    END_REGION reset inactive "Options" data
+	    
+	    REGION reset availability and latching buttons
+	        // Static: Allow commands
+	        #statAvailAct3Mains := (#tempDetAllow1to4 = TRUE);
+	        #statAvailActCancel := (#tempDetAllow8 = TRUE);
+	        #statAvailActConfirm := (#tempDetAllow16 = TRUE);
+	        #statAvailActResetTime := (#tempDetAllow32 = TRUE);
+	        
+	        // Buttons control
+	        // Mains
+	        IF (#statAvailAct3Mains = FALSE) THEN
+	            #statAction.start := FALSE;
+	            #statAction.stop := FALSE;
+	            #statAction.end := FALSE;
+	            
+	        END_IF;
+	        
+	        // Cancel
+	        IF (#statAvailActCancel = FALSE) THEN
+	            #statAction.cancel := FALSE;
+	            
+	        END_IF;
+	        
+	        // Confirm
+	        IF (#statAvailActConfirm = FALSE) THEN
+	            #statAction.confirm := FALSE;
+	            
+	        END_IF;
+	        
+	        // Reset time
+	        IF (#statAvailActResetTime = FALSE) THEN
+	            #statAction.resetTime := FALSE;
+	            
+	        END_IF;
+	        
+	        // Action: Collective integer
+	        "AFC_Struct_To_Word"(s := #statAction,
+	                             w => #tempAction);
+	        
+	        #action := WORD_TO_INT(#tempAction);
+	        
+	    END_REGION reset availability and latching buttons
+	    
+	END_REGION CONTROL OPTIONS
+	
+	REGION WRITE OUTPUTS
+	    // Outputs
+	    #availAct3Mains := #statAvailAct3Mains;
+	    #availActCancel := #statAvailActCancel;
+	    #availActConfirm := #statAvailActConfirm;
+	    #availActResetTime := #statAvailActResetTime;
+	    
+	END_REGION WRITE OUTPUTS
+END_FUNCTION_BLOCK
+

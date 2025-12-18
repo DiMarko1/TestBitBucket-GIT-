@@ -1,0 +1,122 @@
+﻿FUNCTION_BLOCK "libGeo_TankV_1"
+TITLE = libGeo_TankV
+{ S7_Optimized_Access := 'TRUE' }
+AUTHOR : CH
+FAMILY : Aktina
+NAME : Geometry
+VERSION : 0.1
+//Half cone base tank mass calculation.
+//The calculation is based on the principle that by pressure we always get the height of a media with ρ=1 (equal to water). From that we can calculate the volume using the tank dimensions. So we know for a ρ=1 media the volume and by that the mass. So for every ther media no matter the ρ value we know the mass based on the fact that the pressure would be the same. The volume can then be calculated if we know the ρ.
+   VAR_INPUT 
+      r { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   //  Media density
+      d { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   //  Tank diameter
+      hPt { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   //  Pressure transmitter installation height
+      hBase { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   //  Base height
+      hCyl { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   //  Cylinder height
+      hAct { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Real;   //  Actual measured height
+   END_VAR
+
+   VAR_OUTPUT 
+      mass : Real;   //  Media mass
+      vol : Real;   //  Media volume
+      height : Real;   //  Media height
+   END_VAR
+
+   VAR 
+      statHTrue : Real;   //  Static value for the true height of the media inside the tank
+      statVol : Real;   //  Static value for the volume of the media inside the tank
+   END_VAR
+
+   VAR_TEMP 
+      tempHZn1 : Real;   //  Temporary value for the height of media inside the first zone of the tank, the base
+      tempHZn2 : Real;   //  Temporary value for the height of media inside the second zone of the tank, the cylinder
+   END_VAR
+
+   VAR CONSTANT 
+      pi : Real := 3.14159;
+   END_VAR
+
+
+BEGIN
+	REGION BLOCK HEADER
+	    //===============================================================================
+	    // CH / (c)Copyright (2021)
+	    //-------------------------------------------------------------------------------
+	    // Title:               (Volume calculation of water tank)
+	    // Comment/Function:    ()
+	    // Library/Family:      (Aktina/Tools/Geometry)
+	    // Author:              (CH)
+	    // Tested with:         (V17)
+	    // Engineering:         (TIA Step7 Professional V17)
+	    // Restrictions:        ()
+	    // Requirements:        (S7 CPUs)
+	    // Memory access:       (Optimized)
+	    // Notes:             
+	    //-------------------------------------------------------------------------------
+	    // Change log table:
+	    // Version  | Date       | Dev in charge          | Changes
+	    //----------|------------|------------------------|------------------------------
+	    // 01.00.00 | 2022-05-18 | (CH)                   | First released version
+	    //===============================================================================
+	END_REGION
+	
+	REGION BLOCK NOTES
+	    //===============================================================================
+	    // 1:Half cone base tank mass calculation.
+	    // The calculation is based on The principle that by pressure we always get the height of
+	    // a media with ρ=1 (equal to water). From that we can calculate the volume using the tank
+	    // dimensions. So we know for a ρ=1 media the volume and by that the #mass.
+	    // So for every ther media no matter the ρ value we know the mass based on the fact that
+	    // the pressure would be the same. The volume can then be calculated if we know the ρ.
+	    //===============================================================================
+	END_REGION
+	
+	REGION CALCULATION
+	    // Actual height calculation due to the offset height of the transmitter
+	    #statHTrue := #hAct + #hPt;
+	    
+	    // Null volume and stop if the height of media is below the transmitter
+	    IF #hAct <= 1.0 THEN
+	        #statHTrue := 0;
+	        #statVol := 0;
+	        
+	        #height := #statHTrue;
+	        #mass := #statVol;
+	        #vol := #statVol / #r;
+	        
+	        ENO := TRUE;
+	        
+	        RETURN;
+	        
+	        
+	        
+	    END_IF;
+	    
+	    // Height in base
+	    IF #statHTrue < #hBase  THEN
+	        #tempHZn1 := #statHTrue;
+	    ELSE
+	        #tempHZn1 := #hBase;
+	    END_IF;
+	    
+	    // Height in cylinder
+	    IF #statHTrue <= #hBase THEN
+	        #tempHZn2 := 0.0;
+	    ELSIF #statHTrue >= (#hBase + #hCyl) THEN
+	        #tempHZn2 := #hCyl;
+	    ELSE
+	        #tempHZn2 := #statHTrue - #hBase;
+	        END_IF;
+	        
+	    // Volume calculation
+	        #statVol := (#pi * SQR_REAL(#d) * (#tempHZn1)) / 8 + (#pi * SQR_REAL(#d) * (#tempHZn2)) / 4;
+	        
+	        #height := #tempHZn1 + #tempHZn2;
+	        #mass := #statVol;
+	        #vol := #statVol / #r;
+	        
+	        ENO := TRUE;
+	        
+	END_REGION
+END_FUNCTION_BLOCK
+

@@ -1,0 +1,81 @@
+﻿FUNCTION_BLOCK "C_AIN"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      enable { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'} : Bool;
+      index : Int;
+   END_VAR
+
+   VAR_OUTPUT 
+      fault : Bool;
+      warning : Bool;
+      justHadFault : Bool;
+      justLostFault : Bool;
+      justHadWarning : Bool;
+      justLostWarning : Bool;
+      enabled : Bool;
+      output : Real;
+      unit : WString;
+   END_VAR
+
+   VAR 
+      status { ExternalAccessible := 'False'; ExternalVisible := 'False'; ExternalWritable := 'False'; S7_SetPoint := 'False'} : "UDT_STATUS_AIN";
+   END_VAR
+
+   VAR_TEMP 
+      module : "UDT_AIN";
+      resetStatus : "UDT_STATUS_AIN";
+   END_VAR
+
+
+BEGIN
+	IF #enable THEN
+	    
+	    #status.enabled := TRUE;
+	    #module := "MOD".AIN[#index].i;
+	    
+	    REGION STATUS
+	        
+	        #status.warning := #module.faults.l.status.alarm;
+	        #status.fault := #module.faults.ll.status.alarm;
+	        #status.value := #module.output;
+	        #status.unit := #module.unit;
+	        
+	        #status.justHadWarning := "detectPE"(newValue := #status.warning, oldValue := NOT #status.old.warning);
+	        #status.justLostWarning := "detectNE"(newValue := #status.warning, oldValue := NOT #status.old.warning);
+	        #status.justHadFault := "detectPE"(newValue := #status.fault, oldValue := NOT #status.old.fault);
+	        #status.justLostFault := "detectNE"(newValue := #status.fault, oldValue := NOT #status.old.fault);
+	        
+	        #status.old.fault := #status.fault;
+	        #status.old.warning := #status.warning;
+	        
+	    END_REGION
+	    
+	    REGION SIM
+	        
+	        "MOD".AIN[#index].i.sim."en" := "MODULES_CTRL".AIN[#index].sim."en";
+	        "MOD".AIN[#index].i.sim.value := "MODULES_CTRL".AIN[#index].sim.value;
+	        
+	    END_REGION
+	    
+	ELSE
+	    
+	    #status := #resetStatus;
+	    
+	END_IF;
+	
+	REGION Output
+	    
+	    #fault := #status.fault;
+	    #warning := #status.warning;
+	    #justHadFault := #status.justHadFault;
+	    #justLostFault := #status.justLostFault;
+	    #justHadWarning := #status.justHadWarning;
+	    #justLostWarning := #status.justLostWarning;
+	    #enabled := #status.enabled;
+	    #output := #status.value;
+	    #unit := #status.unit;
+	    
+	END_REGION Output
+END_FUNCTION_BLOCK
+
