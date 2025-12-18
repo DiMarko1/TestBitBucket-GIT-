@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Types.PlcStruct ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="None">
+    <Member Name="setup" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">HMI Setup</MultiLanguageText>
+      </Comment>
+      <Member Name="en" Datatype="Bool">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Enable alarm</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="spon" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Setpoint for delay on timer (Real number because we count every 100ms)</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+    </Member>
+    <Member Name="don" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Delay on for alarming</MultiLanguageText>
+      </Comment>
+      <Member Name="countup" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Command to start counting</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="sp" Datatype="UInt">
+        <Comment>
+          <MultiLanguageText Lang="en-US">SP in x100ms</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="actual" Datatype="UInt">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Actual time elapsed</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="end" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">End of measurement</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="status" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Status</MultiLanguageText>
+      </Comment>
+      <Member Name="plcackn" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">PLC acknowledgement</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="alarm" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Alarm</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="siren" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Siren</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+  </Section>
+</Sections></Interface>
+      <Name>UDT_ALARMACKN</Name>
+      <Namespace />
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="3" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Types.PlcStruct>
+</Document>

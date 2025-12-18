@@ -1,0 +1,272 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Types.PlcStruct ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="None">
+    <Member Name="cmd" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Commands</MultiLanguageText>
+      </Comment>
+      <Member Name="auto" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="man" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="start" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="stop" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="ind" Datatype="Struct">
+      <Member Name="auto" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="man" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="start" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="stop" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="sim" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Simulation</MultiLanguageText>
+      </Comment>
+      <Member Name="fb" Datatype="Bool">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Feedback simulation</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="ctrl" Datatype="Bool">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Control simulation</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="faults" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Faults</MultiLanguageText>
+      </Comment>
+      <Member Name="ftr" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Fail to run</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="fts" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Fail to stop</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="mcb" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">MCB failure</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="ctrl" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">CTRL failure</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="il" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Interlock violation</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="fpreset" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Faceplate reset for individual treatment</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="arh" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Working hours &amp; maintenance timer</MultiLanguageText>
+      </Comment>
+      <Member Name="checkafter" Datatype="DInt">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Check motor after this SP of working hours</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="lastmaint" Datatype="DInt">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Last maintenance</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="difference" Datatype="DInt">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Actual - Last maintenance</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="actual" Datatype="DInt">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Actual working time (h)</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="seconds" Datatype="DInt">
+        <Comment>
+          <MultiLanguageText Lang="en-US">seconds counter</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="hour" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">1 hour completed</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="resetarh" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Reset total timer</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="enable" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Enable maintenance</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="maintenance" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Maintenance required</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="completed" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Maintenance completed</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="status" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Status</MultiLanguageText>
+      </Comment>
+      <Member Name="vfb" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Virtual feedback</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="vctrl" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Virtual control</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="ilstart" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Motor is allowed to start</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="fault" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">General fault (generated from the others)</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="maint" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Maintenance required</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="icon" Datatype="Int">
+        <StartValue>0</StartValue>
+      </Member>
+    </Member>
+    <Member Name="delay" Datatype="&quot;UDT_DELAYONOFF&quot;">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">Activation delay on/off</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="out" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Output</MultiLanguageText>
+      </Comment>
+      <Member Name="manrun" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Manual run</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="run" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Command to run</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+  </Section>
+</Sections></Interface>
+      <Name>UDT_MOTORDIRECT</Name>
+      <Namespace />
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="3" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Types.PlcStruct>
+</Document>

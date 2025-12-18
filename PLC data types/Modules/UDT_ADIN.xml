@@ -1,0 +1,190 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Types.PlcStruct ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="None">
+    <Member Name="time" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Delay setpoints</MultiLanguageText>
+      </Comment>
+      <Member Name="on_set" Datatype="Int">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Desired delay to set the memory switch</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="off_set" Datatype="Int">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Desired delay to reset the memory switch</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="on_act" Datatype="Int">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Counted delay to set the memory switch</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="off_act" Datatype="Int">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Counted delay to reset the memory switch</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+    </Member>
+    <Member Name="setup" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Setup of switch</MultiLanguageText>
+      </Comment>
+      <Member Name="comparison" Datatype="Int">
+        <Comment>
+          <MultiLanguageText Lang="en-US">0 = "&gt;", 1 = "&gt;=", 2 = "&lt;", 3 = "&lt;="</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="reference" Datatype="Real">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Reference value to which the sensor is compared</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="alarm" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">0=alarm disabled, 1=alarm enabled</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="triggerversion" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">0=switch inactive for triggerring, 1=switch active for triggering</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="faults" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Faults</MultiLanguageText>
+      </Comment>
+      <Member Name="adin" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Digital switch fault</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="fpreset" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Faceplate reset for individual treatment</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="sim" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Simulation</MultiLanguageText>
+      </Comment>
+      <Member Name="cmdon" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">simulation on command</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="cmdoff" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">simulation off command</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="simulated" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">0=simulation off, 1=simulation on</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="cmdforce" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">force switch command</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="cmdunforce" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">unforce switch command</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="forced" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">0=unforced, 1=forced</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="status" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Status</MultiLanguageText>
+      </Comment>
+      <Member Name="rawinput" Datatype="Real">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Raw input value</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="processed" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Status of input after comparison</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="switch_active" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Switch is Active after delay on</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="alarm_monitor" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Alarm is monitored</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="fault" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Fault is activated</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="unit" Datatype="WString" />
+  </Section>
+</Sections></Interface>
+      <Name>UDT_ADIN</Name>
+      <Namespace />
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="3" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Types.PlcStruct>
+</Document>

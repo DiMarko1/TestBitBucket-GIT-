@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Types.PlcStruct ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="None">
+    <Member Name="count" Datatype="Bool">
+      <Comment>
+        <MultiLanguageText Lang="en-US"> TRUE: The conditional timer should start counting the preset duration (types 0, 2)</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="reset" Datatype="Bool">
+      <Comment>
+        <MultiLanguageText Lang="en-US"> TRUE: The conditional timer should reset (types 0, 2)</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="proceed" Datatype="Bool">
+      <Comment>
+        <MultiLanguageText Lang="en-US"> TRUE: The step should end and proceed to next (types 1,2)</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="prompt" Datatype="Bool">
+      <Comment>
+        <MultiLanguageText Lang="en-US"> TRUE: The step is requesting a prompt for confirmation</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="nofault" Datatype="Bool">
+      <Comment>
+        <MultiLanguageText Lang="en-US"> TRUE: There is no critical fault for this step</MultiLanguageText>
+      </Comment>
+    </Member>
+  </Section>
+</Sections></Interface>
+      <Name>dtStepCond</Name>
+      <Namespace />
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="3" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Types.PlcStruct>
+</Document>

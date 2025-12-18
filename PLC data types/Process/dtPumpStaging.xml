@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Types.PlcStruct ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="None">
+    <Member Name="cmdSmall" Datatype="Bool">
+      <StartValue>false</StartValue>
+    </Member>
+    <Member Name="cmdBig" Datatype="Bool">
+      <StartValue>false</StartValue>
+    </Member>
+    <Member Name="cmdMed" Datatype="Bool">
+      <StartValue>false</StartValue>
+    </Member>
+    <Member Name="tDelay" Datatype="Time">
+      <Comment>
+        <MultiLanguageText Lang="en-US">1=P44_05, 2=P44_06</MultiLanguageText>
+      </Comment>
+      <StartValue>T#20s</StartValue>
+    </Member>
+    <Member Name="stageUpThr" Datatype="Real">
+      <StartValue>95.0</StartValue>
+    </Member>
+    <Member Name="stageDnThr" Datatype="Real">
+      <StartValue>45.0</StartValue>
+    </Member>
+    <Member Name="activeBig" Datatype="Int">
+      <StartValue>0</StartValue>
+    </Member>
+  </Section>
+</Sections></Interface>
+      <Name>dtPumpStaging</Name>
+      <Namespace />
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="3" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Types.PlcStruct>
+</Document>

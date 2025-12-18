@@ -1,0 +1,291 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Types.PlcStruct ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="None">
+    <Member Name="chn" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Channel</MultiLanguageText>
+      </Comment>
+      <Member Name="type" Datatype="UInt">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Type of measurement: 0=hmi, 1=H-L, 2=factor</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="in" Datatype="Real">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Input to real number</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="high" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Channel high limit (ex. 27648)</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="low" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Channel high limit (ex. 0)</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+    </Member>
+    <Member Name="scale" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Scaling</MultiLanguageText>
+      </Comment>
+      <Member Name="high" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">High limit of scale process</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="low" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Low limit of scale process</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="factor" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Factor multiplied to real number</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="set" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Scaling setup is complete</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="sim" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Simulation</MultiLanguageText>
+      </Comment>
+      <Member Name="en" Datatype="Bool">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Simulation command</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="value" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Simulation value</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+    </Member>
+    <Member Name="exp" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Exponential filter</MultiLanguageText>
+      </Comment>
+      <Member Name="en" Datatype="Bool">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Exponential smoothing function (1=en, 0=dis)</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="init" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Exponential function initialized</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="T" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Time to reach 63.2% = 1-1/e of  original signal (must &gt;=Dt)</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="limit" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Limit near value that forces the Sn to break the loop and catch the Xn</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="dt" Datatype="Real">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Dt in ms</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="a" Datatype="Real">
+        <Comment>
+          <MultiLanguageText Lang="en-US">a = 1- e^(-Dt/T) and if Dt&lt;&lt;&lt;T then a=Dt/T </MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+    </Member>
+    <Member Name="faults" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Alarms</MultiLanguageText>
+      </Comment>
+      <Member Name="hh" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+      </Member>
+      <Member Name="h" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+      </Member>
+      <Member Name="l" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+      </Member>
+      <Member Name="ll" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+      </Member>
+      <Member Name="sp_hh" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Setpoint of high-high alarm</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="sp_h" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Setpoint of high alarm</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="sp_l" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Setpoint of low alarm</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="sp_ll" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Setpoint of low-low alarm</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="fpreset" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Reset Alarms</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="trendlow" Datatype="Real">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">Low limit of trend y axis = ymin - abs(ymax)*0.1</MultiLanguageText>
+      </Comment>
+      <StartValue>0.0</StartValue>
+    </Member>
+    <Member Name="trendhigh" Datatype="Real">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">High limit of trend y axis = ymax + abs(ymax)*0.1</MultiLanguageText>
+      </Comment>
+      <StartValue>0.0</StartValue>
+    </Member>
+    <Member Name="scaled" Datatype="Real">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Output value after scaling</MultiLanguageText>
+      </Comment>
+      <StartValue>0.0</StartValue>
+    </Member>
+    <Member Name="output" Datatype="Real">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Output value after smoothing (or not if disabled)</MultiLanguageText>
+      </Comment>
+      <StartValue>0.0</StartValue>
+    </Member>
+    <Member Name="unit" Datatype="WString">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">Unit</MultiLanguageText>
+      </Comment>
+      <StartValue>WSTRING#''</StartValue>
+    </Member>
+  </Section>
+</Sections></Interface>
+      <Name>UDT_AIN</Name>
+      <Namespace />
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="3" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Types.PlcStruct>
+</Document>

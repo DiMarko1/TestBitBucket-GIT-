@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Types.PlcStruct ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="None">
+    <Member Name="in" Datatype="Struct">
+      <Member Name="spon" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Setpoint for delay on timer (Real number because we count every 100ms)</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+    </Member>
+    <Member Name="don" Datatype="Struct">
+      <Member Name="trigger" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="sp" Datatype="Int">
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="actual" Datatype="Int">
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="end" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="out" Datatype="Struct">
+      <Member Name="on" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+  </Section>
+</Sections></Interface>
+      <Name>UDT_DELAYON</Name>
+      <Namespace />
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="3" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Types.PlcStruct>
+</Document>

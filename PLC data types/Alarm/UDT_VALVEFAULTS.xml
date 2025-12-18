@@ -1,0 +1,142 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Types.PlcStruct ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="None">
+    <Member Name="ctrl" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">External data (Primary alarm data - alarm &amp; plc ackn)</MultiLanguageText>
+      </Comment>
+      <Member Name="alarm_ftamain" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="alarm_ftaupper" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="alarm_ftalower" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="alarm_ftd" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit12" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="alarm_il" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit14" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit15" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="plcackn_ftamain" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="plcackn_ftaupper" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="plcackn_ftalower" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="plcackn_ftd" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit4" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="plcackn_il" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit6" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit7" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="status" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">External data (Secondary alarm data - siren &amp; hmi ackn)</MultiLanguageText>
+      </Comment>
+      <Member Name="siren_ftamain" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="siren_ftaupper" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="siren_ftalower" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="siren_ftd" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit12" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="siren_il" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit14" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit15" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="hmiackn_ftamain" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="hmiackn_ftaupper" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="hmiackn_ftalower" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="hmiackn_ftd" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit4" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="hmiackn_il" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit6" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit7" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+  </Section>
+</Sections></Interface>
+      <Name>UDT_VALVEFAULTS</Name>
+      <Namespace />
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="3" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Types.PlcStruct>
+</Document>

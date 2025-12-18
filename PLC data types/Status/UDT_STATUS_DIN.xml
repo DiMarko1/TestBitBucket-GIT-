@@ -1,0 +1,47 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Types.PlcStruct ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="None">
+    <Member Name="switch" Datatype="Bool" />
+    <Member Name="justActivated" Datatype="Bool" />
+    <Member Name="justDectivated" Datatype="Bool" />
+    <Member Name="fault" Datatype="Bool" />
+    <Member Name="justHadFault" Datatype="Bool" />
+    <Member Name="justLostFault" Datatype="Bool" />
+    <Member Name="enabled" Datatype="Bool" />
+    <Member Name="old" Datatype="Struct">
+      <Member Name="switch" Datatype="Bool" />
+      <Member Name="fault" Datatype="Bool" />
+    </Member>
+  </Section>
+</Sections></Interface>
+      <Name>UDT_STATUS_DIN</Name>
+      <Namespace />
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="3" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Types.PlcStruct>
+</Document>

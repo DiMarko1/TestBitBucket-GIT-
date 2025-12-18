@@ -1,0 +1,142 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Types.PlcStruct ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="None">
+    <Member Name="ctrl" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">External data (Primary fault data - alarm &amp; plc ackn)</MultiLanguageText>
+      </Comment>
+      <Member Name="alarm_hh" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="alarm_ll" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit10" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit11" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit12" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit13" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit14" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit15" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="plcackn_hh" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="plcackn_ll" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit2" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit3" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit4" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit5" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit6" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit7" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="status" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">External data (Secondary fault data - siren &amp; hmi ackn)</MultiLanguageText>
+      </Comment>
+      <Member Name="siren_hh" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="siren_ll" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit10" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit11" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit12" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit13" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit14" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit15" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="hmiackn_hh" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="hmiackn_ll" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit2" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit3" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit4" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit5" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit6" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="bit7" Datatype="Bool">
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+  </Section>
+</Sections></Interface>
+      <Name>UDT_AINFAULTS</Name>
+      <Namespace />
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="3" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Types.PlcStruct>
+</Document>

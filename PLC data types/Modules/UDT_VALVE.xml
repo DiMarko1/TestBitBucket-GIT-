@@ -1,0 +1,339 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Types.PlcStruct ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="None">
+    <Member Name="cmd" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Control commands</MultiLanguageText>
+      </Comment>
+      <Member Name="auto" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Auto</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="man" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Manual</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="main" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Main route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="upper" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Upper s/l route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="lower" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Lower s/l route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="deact" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Deactivated</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="ind" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Control indications</MultiLanguageText>
+      </Comment>
+      <Member Name="auto" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Auto</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="man" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Manual</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="main" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Main route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="upper" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Upper s/l route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="lower" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Lower s/l route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="deact" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Deactivated</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="man" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Manual activations</MultiLanguageText>
+      </Comment>
+      <Member Name="main" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Main route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="upper" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Upper s/l route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="lower" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Lower s/l route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="sim" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Simulation</MultiLanguageText>
+      </Comment>
+      <Member Name="main" Datatype="Bool">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Activated main position</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="upper" Datatype="Bool">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Activated upper s/l position</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="lower" Datatype="Bool">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Activated lower s/l position</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="deact" Datatype="Bool">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Deactivated position</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="faults" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Fault monitoring</MultiLanguageText>
+      </Comment>
+      <Member Name="ftamain" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Setpoint: failed to activate main route</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="ftaupper" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Setpoint: failed to activate upper s/l route</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="ftalower" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Setpoint: failed to activate lower s/l route</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="ftd" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Setpoint: failed to deactivate valve</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="il" Datatype="&quot;UDT_ALARMACKN&quot;">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Setpoint: failed to deactivate valve</MultiLanguageText>
+        </Comment>
+      </Member>
+      <Member Name="fpreset" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Faceplate reset for individual treatment</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="delaymain" Datatype="&quot;UDT_DELAYONOFF&quot;">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">Activation delay on/off for main route</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="delayupper" Datatype="&quot;UDT_DELAYONOFF&quot;">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">Activation delay on/off for upper s/l route</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="delaylower" Datatype="&quot;UDT_DELAYONOFF&quot;">
+      <AttributeList>
+        <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+      </AttributeList>
+      <Comment>
+        <MultiLanguageText Lang="en-US">Activation delay on/off for lower s/l route</MultiLanguageText>
+      </Comment>
+    </Member>
+    <Member Name="out" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Output</MultiLanguageText>
+      </Comment>
+      <Member Name="actmain" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Activate main route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="actupper" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Activate upper s/l route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="actlower" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Activate lower s/l route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="status" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Status</MultiLanguageText>
+      </Comment>
+      <Member Name="vfbmain" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Activated main route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="vfbupper" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Activated upper s/l route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="vfblower" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Activated lower s/l route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="vfbdeact" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Deactivated</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="fault" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Collective fault</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="ilactmain" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Allow to activate main route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="ilactupper" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Allow to activate upper s/l route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="ilactlower" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Allow to activate lower s/l route</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="icon" Datatype="Int">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Valve's graphic icon</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+    </Member>
+  </Section>
+</Sections></Interface>
+      <Name>UDT_VALVE</Name>
+      <Namespace />
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="3" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Types.PlcStruct>
+</Document>

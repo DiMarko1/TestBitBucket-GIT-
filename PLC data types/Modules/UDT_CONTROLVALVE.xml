@@ -1,0 +1,332 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Document>
+  <Engineering version="V19" />
+  <SW.Types.PlcStruct ID="0">
+    <AttributeList>
+      <Interface><Sections xmlns="http://www.siemens.com/automation/Openness/SW/Interface/v5">
+  <Section Name="None">
+    <Member Name="pid" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">PID</MultiLanguageText>
+      </Comment>
+      <Member Name="mode" Datatype="Bool">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Auto=0, Man=1</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="action" Datatype="Bool">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Reverse=0, Forward=1</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="spsource" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">0=internal setpoint, 1=external setpoint</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="followup" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">0=motor control from PID, 1=motor setpoint directly from program</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="cmdrst" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Controller reset command</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="pidrun" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Controller is running</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="P" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Proportional gain</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="I" Datatype="DInt">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Integral action</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="D" Datatype="DInt">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Derivative action</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="SP" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Setpoint</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="PV" Datatype="Real">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Peripheral value</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="OFFVAL" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Value loaded to OP when the actuator is stopped</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="LMN" Datatype="Real">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Output of the PID controller</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="OP" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Final output to the element</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="L" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Lower value</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="H" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Higher value</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="EXT_SP" Datatype="Real">
+        <Comment>
+          <MultiLanguageText Lang="en-US">External setpoint</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="FUP" Datatype="Real">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Follow up value</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="ITLVAL" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Controller initialization value</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="pvunit" Datatype="WString">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">PV Unit</MultiLanguageText>
+        </Comment>
+        <StartValue>WSTRING#''</StartValue>
+      </Member>
+      <Member Name="outunit" Datatype="WString">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Output Unit</MultiLanguageText>
+        </Comment>
+        <StartValue>WSTRING#''</StartValue>
+      </Member>
+      <Member Name="init" Datatype="Struct">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Controller initialization routine</MultiLanguageText>
+        </Comment>
+        <Member Name="req" Datatype="Bool">
+          <Comment>
+            <MultiLanguageText Lang="en-US">An initialization routine is required</MultiLanguageText>
+          </Comment>
+          <StartValue>false</StartValue>
+        </Member>
+        <Member Name="dur" Datatype="Real">
+          <AttributeList>
+            <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+          </AttributeList>
+          <Comment>
+            <MultiLanguageText Lang="en-US">Initialization duration</MultiLanguageText>
+          </Comment>
+          <StartValue>0.0</StartValue>
+        </Member>
+        <Member Name="delay" Datatype="&quot;UDT_DELAYON&quot;" />
+      </Member>
+    </Member>
+    <Member Name="unscale" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Scale output</MultiLanguageText>
+      </Comment>
+      <Member Name="in" Datatype="Real">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Value to be unscaled</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="inhigh" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">High limit of scale process (input value)</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="inlow" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Low limit of scale process (input value)</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="outhigh" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">High limit of scale process (output value)</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="outlow" Datatype="Real">
+        <AttributeList>
+          <BooleanAttribute Name="SetPoint" SystemDefined="true">true</BooleanAttribute>
+        </AttributeList>
+        <Comment>
+          <MultiLanguageText Lang="en-US">Low limit of scale process (output value)</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="output" Datatype="Real">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Unscaled value (only linear and span &gt; 0)</MultiLanguageText>
+        </Comment>
+        <StartValue>0.0</StartValue>
+      </Member>
+      <Member Name="set" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">The scaling function is set</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+    <Member Name="status" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Status</MultiLanguageText>
+      </Comment>
+      <Member Name="ilstart" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Interlock start box</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="icon" Datatype="Int">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Valve icon</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+    </Member>
+    <Member Name="out" Datatype="Struct">
+      <Comment>
+        <MultiLanguageText Lang="en-US">Output</MultiLanguageText>
+      </Comment>
+      <Member Name="ref" Datatype="Int">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Reference to control valve</MultiLanguageText>
+        </Comment>
+        <StartValue>0</StartValue>
+      </Member>
+      <Member Name="control" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Command to start controlling</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="vfbact" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Virtual feedback "Open"</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+      <Member Name="vfbdeact" Datatype="Bool">
+        <Comment>
+          <MultiLanguageText Lang="en-US">Virtual feedback "Close"</MultiLanguageText>
+        </Comment>
+        <StartValue>false</StartValue>
+      </Member>
+    </Member>
+  </Section>
+</Sections></Interface>
+      <Name>UDT_CONTROLVALVE</Name>
+      <Namespace />
+    </AttributeList>
+    <ObjectList>
+      <MultilingualText ID="1" CompositionName="Comment">
+        <ObjectList>
+          <MultilingualTextItem ID="2" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+      <MultilingualText ID="3" CompositionName="Title">
+        <ObjectList>
+          <MultilingualTextItem ID="4" CompositionName="Items">
+            <AttributeList>
+              <Culture>en-US</Culture>
+              <Text />
+            </AttributeList>
+          </MultilingualTextItem>
+        </ObjectList>
+      </MultilingualText>
+    </ObjectList>
+  </SW.Types.PlcStruct>
+</Document>
